@@ -166,23 +166,47 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const updateRequest = async (id: number, updatedRequest: Partial<Request>) => {
-    // 1. Remove o ID do payload para evitar erros de update na Primary Key
-    const { id: _, ...payload } = updatedRequest;
-
-    // 2. Atualização Otimista (UI primeiro)
+    // 1. Atualização Otimista (UI primeiro) para responsividade
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updatedRequest } : r));
 
     try {
-        // 3. Atualização no Banco
-        const { error } = await supabase.from('requests').update(payload).eq('id', id);
+        // 2. Preparar Payload Seguro (Allow-list)
+        // Isso remove qualquer propriedade extra que o objeto 'Request' possa ter em memória
+        // e que não existe no banco de dados, evitando erros de "Column does not exist".
+        const dbPayload: any = {
+            orderNumber: updatedRequest.orderNumber,
+            requestDate: updatedRequest.requestDate,
+            requester: updatedRequest.requester,
+            sector: updatedRequest.sector,
+            supplier: updatedRequest.supplier,
+            description: updatedRequest.description,
+            deliveryDate: updatedRequest.deliveryDate,
+            status: updatedRequest.status,
+            responsible: updatedRequest.responsible,
+            items: updatedRequest.items,
+            customFields: updatedRequest.customFields,
+            history: updatedRequest.history
+        };
+
+        // 3. Limpeza: Remover chaves que são estritamente 'undefined'
+        // O Supabase/PostgREST aceita null, mas comportamento com undefined pode variar no client.
+        Object.keys(dbPayload).forEach(key => {
+            if (dbPayload[key] === undefined) {
+                delete dbPayload[key];
+            }
+        });
+
+        // 4. Atualização no Banco
+        const { error } = await supabase.from('requests').update(dbPayload).eq('id', id);
         
         if (error) {
+            console.error("Supabase Error Details:", error);
             throw error;
         }
     } catch (err) {
         console.error("Erro ao salvar atualização no banco:", err);
-        // Opcional: Reverter estado aqui ou notificar usuário
-        alert("Houve um erro ao salvar as alterações. Verifique sua conexão.");
+        // Opcional: Reverter estado aqui ou notificar usuário de forma mais clara
+        alert("Houve um erro ao salvar as alterações. Verifique o console para mais detalhes.");
     }
   };
 

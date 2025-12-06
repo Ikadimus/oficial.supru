@@ -25,7 +25,7 @@ const RequestEditPage: React.FC = () => {
     if (requestId) {
         const requestToEdit = getRequestById(requestId);
         if (requestToEdit) {
-            // Cria cópias profundas para evitar referência direta
+            // Cria cópias profundas para evitar referência direta e problemas com mutabilidade
             const dataCopy = JSON.parse(JSON.stringify(requestToEdit));
             setRequestData(dataCopy);
             setInitialData(JSON.parse(JSON.stringify(requestToEdit)));
@@ -79,13 +79,14 @@ const RequestEditPage: React.FC = () => {
     if (requestData && requestData.id && initialData) {
         setIsSaving(true);
         // --- Lógica de Auditoria (Diff) ---
-        const historyEntries: RequestHistoryEntry[] = requestData.history || [];
+        // Clona o array de histórico existente para não mutar o estado diretamente antes do update
+        const historyEntries: RequestHistoryEntry[] = requestData.history ? [...requestData.history] : [];
         const now = new Date().toISOString();
         const userName = user?.name || 'Desconhecido';
         
         const formatValue = (val: any) => {
             if (val === null || val === undefined) return '';
-            return String(val);
+            return String(val).trim();
         };
 
         // 1. Verificar Campos
@@ -125,10 +126,19 @@ const RequestEditPage: React.FC = () => {
             });
         }
 
-        // Salvar (Aguardar Promise do Contexto)
-        await updateRequest(requestData.id, { ...requestData, items, history: historyEntries });
-        setIsSaving(false);
-        navigate(`/requests/${requestData.id}`, { replace: true });
+        try {
+            // Salvar (Aguardar Promise do Contexto)
+            await updateRequest(requestData.id, { 
+                ...requestData, 
+                items: items, 
+                history: historyEntries 
+            });
+            // Navega apenas se não houve erro
+            navigate(`/requests/${requestData.id}`, { replace: true });
+        } catch (error) {
+            // O erro já é tratado no context, mas podemos manter o loading state consistente
+            setIsSaving(false);
+        }
     }
   };
 
