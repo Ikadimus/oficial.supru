@@ -1,22 +1,61 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Request } from '../types';
 import Button from '../components/ui/Button';
 
-const StatCard: React.FC<{ title: string; value: number; icon: React.ReactNode }> = ({ title, value, icon }) => (
-  <div className="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-5 flex items-center justify-between">
-    <div>
-      <p className="text-gray-400 text-sm">{title}</p>
-      <p className="text-3xl font-bold text-white">{value}</p>
+// --- Components ---
+
+const StatCard: React.FC<{ title: string; value: number; icon: React.ReactNode; colorName: string }> = ({ title, value, icon, colorName }) => {
+  
+  // Mapeamento de cores para classes Tailwind
+  const colorMap: Record<string, { bg: string, text: string }> = {
+    yellow: { bg: 'bg-yellow-600', text: 'text-yellow-400' },
+    blue:   { bg: 'bg-blue-600',   text: 'text-blue-400' },
+    purple: { bg: 'bg-purple-600', text: 'text-purple-400' },
+    green:  { bg: 'bg-emerald-600',text: 'text-emerald-400' },
+    red:    { bg: 'bg-red-600',    text: 'text-red-400' },
+    gray:   { bg: 'bg-zinc-600',   text: 'text-zinc-400' },
+    // Fallback
+    default:{ bg: 'bg-zinc-700',   text: 'text-zinc-300' }
+  };
+
+  const colors = colorMap[colorName] || colorMap.default;
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex items-center justify-between shadow-lg hover:shadow-xl transition-shadow duration-300 relative overflow-hidden group">
+        <div className={`absolute top-0 right-0 w-24 h-24 ${colors.bg} opacity-5 rounded-full -mr-4 -mt-4 transition-transform group-hover:scale-110`}></div>
+        <div className="relative z-10">
+        <p className="text-gray-400 text-sm font-medium uppercase tracking-wider truncate max-w-[120px]" title={title}>{title}</p>
+        <p className="text-3xl font-bold text-white mt-1">{value}</p>
+        </div>
+        <div className={`text-gray-300 ${colors.bg} bg-opacity-20 p-3 rounded-lg relative z-10`}>
+             <div className={colors.text}>
+                 {icon}
+             </div>
+        </div>
     </div>
-    <div className="text-gray-500 bg-zinc-800 p-3 rounded-full">
-      {icon}
-    </div>
-  </div>
-);
+  );
+};
+
+const getStatusIcon = (color: string) => {
+    switch (color) {
+        case 'green': // Concluído/Entregue
+            return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>;
+        case 'yellow': // Pendente/Atenção
+            return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>;
+        case 'blue': // Processando/Info
+            return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>;
+        case 'purple': // Especial/Aguardando
+            return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>;
+        case 'red': // Cancelado/Erro
+            return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>;
+        default: // Gray/Outros
+            return <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>;
+    }
+}
 
 const StatusBadge: React.FC<{ statusName: string }> = ({ statusName }) => {
     const { statuses } = useRequests();
@@ -24,15 +63,15 @@ const StatusBadge: React.FC<{ statusName: string }> = ({ statusName }) => {
     const color = status?.color || 'gray';
 
     const statusStyles: Record<string, string> = {
-        yellow: 'bg-yellow-900/50 text-yellow-300 border border-yellow-500/30',
-        blue: 'bg-blue-900/50 text-blue-300 border border-blue-500/30',
-        purple: 'bg-purple-900/50 text-purple-300 border border-purple-500/30',
-        green: 'bg-green-900/50 text-green-300 border border-green-500/30',
-        red: 'bg-red-900/50 text-red-300 border border-red-500/30',
-        gray: 'bg-gray-700 text-gray-300 border border-gray-500/30',
+        yellow: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+        blue: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+        purple: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+        green: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+        red: 'bg-red-500/10 text-red-400 border border-red-500/20',
+        gray: 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20',
     };
     return (
-        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[color]}`}>
+        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md ${statusStyles[color]}`}>
             {statusName}
         </span>
     );
@@ -45,83 +84,95 @@ const formatDate = (dateString: string | undefined) => {
 }
 
 const DashboardPage: React.FC = () => {
-  const { requests, loading, formFields } = useRequests();
+  const { requests, loading, formFields, statuses } = useRequests();
   const { user, hasFullVisibility, sectors } = useAuth();
+  const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
 
   const filteredRequests = useMemo(() => {
       if (loading || !user) return [];
-      // Se tiver visibilidade total (Admin, Gerente, Diretor), vê tudo. Se não, filtra pelo setor.
       if (hasFullVisibility) return requests;
       return requests.filter(r => r.sector === user.sector);
   }, [requests, user, hasFullVisibility, loading]);
 
+  // --- Contagem Dinâmica por Status ---
+  const statusCounts = useMemo(() => {
+      const counts: Record<string, number> = {};
+      // Inicializa com 0 para todos os status configurados
+      statuses.forEach(s => counts[s.name] = 0);
+      
+      // Conta as solicitações
+      filteredRequests.forEach(req => {
+          if (counts[req.status] !== undefined) {
+              counts[req.status]++;
+          } else {
+              // Se tiver um status que não existe mais na config, podemos ignorar ou agrupar
+              // counts['Outros'] = (counts['Outros'] || 0) + 1;
+          }
+      });
+      return counts;
+  }, [filteredRequests, statuses]);
+
   // --- Estatísticas Mensais ---
   const monthlyStats = useMemo(() => {
-      const stats: { name: string; count: number }[] = [];
+      const stats: { name: string; fullDate: string; count: number }[] = [];
       const today = new Date();
       
-      // Gera os últimos 6 meses
       for (let i = 5; i >= 0; i--) {
           const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-          const monthName = d.toLocaleString('pt-BR', { month: 'short' });
+          const monthName = d.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
           const yearShort = d.getFullYear().toString().slice(2);
-          const key = `${monthName}/${yearShort}`;
+          const key = `${monthName}/${yearShort}`; // ex: out/23
           
-          // Filtra requests desse mês/ano
           const count = filteredRequests.filter(req => {
              if (!req.requestDate) return false;
-             const reqDate = new Date(req.requestDate);
-             // Ajuste de fuso horário simples (considerando data YYYY-MM-DD)
-             // Vamos comparar strings YYYY-MM para ser mais seguro
-             const reqYearMonth = req.requestDate.slice(0, 7); // "2023-10"
+             const reqYearMonth = req.requestDate.slice(0, 7); 
              const currentYearMonth = d.toISOString().slice(0, 7);
              return reqYearMonth === currentYearMonth;
           }).length;
 
-          stats.push({ name: key, count });
+          stats.push({ name: key, fullDate: d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }), count });
       }
       return stats;
   }, [filteredRequests]);
 
-  const maxMonthlyCount = Math.max(...monthlyStats.map(s => s.count), 1); // Evita divisão por zero
+  // Cálculo para o Eixo Y (Escala)
+  const maxMonthlyCount = Math.max(...monthlyStats.map(s => s.count), 1);
+  const yAxisMax = Math.ceil((maxMonthlyCount + 1) / 5) * 5; 
+  const yAxisSteps = [yAxisMax, yAxisMax * 0.75, yAxisMax * 0.5, yAxisMax * 0.25, 0];
 
   // --- Estatísticas por Setor ---
   const sectorStats = useMemo(() => {
-      // 1. Inicializa contagem com todos os setores cadastrados (para mostrar 0 se não tiver nada)
       const counts: Record<string, number> = {};
       
-      // Se for Admin/Gerente, mostramos todos os setores. Se for usuário comum, foca no dele (mas a lógica filteredRequests já limita os dados)
-      // Porém, para o gráfico ficar bonito para o Admin, pegamos a lista completa de 'sectors'
       sectors.forEach(s => {
           counts[s.name] = 0;
       });
 
-      // 2. Conta as solicitações
       filteredRequests.forEach(req => {
           const sName = req.sector || 'Sem Setor';
           counts[sName] = (counts[sName] || 0) + 1;
       });
 
-      // 3. Transforma em array e ordena
       return Object.entries(counts)
           .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count); // Ordena do maior para o menor
+          .sort((a, b) => b.count - a.count)
+          .filter(s => s.count > 0 || sectors.length <= 5)
+          .slice(0, 6);
   }, [filteredRequests, sectors]);
 
   const maxSectorCount = Math.max(...sectorStats.map(s => s.count), 1);
 
   if (loading) {
-    return <div className="text-center p-10 text-gray-400">Carregando...</div>;
+    return (
+        <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
+    );
   }
   
   const total = filteredRequests.length;
-  const pending = filteredRequests.filter(r => r.status === 'Pendente').length;
-  const inProgress = filteredRequests.filter(r => r.status === 'Em Andamento').length;
-  const concluded = filteredRequests.filter(r => r.status === 'Entregue').length;
   
   const recentRequests = filteredRequests.slice(0, 5);
-  
-  // Colunas Visíveis (Sincronizado com a configuração de campos)
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
 
   const getCellValue = (request: any, fieldId: string, isStandard: boolean) => {
@@ -132,18 +183,19 @@ const DashboardPage: React.FC = () => {
           return <StatusBadge statusName={String(value)} />;
       }
 
-      // Lógica específica do Dashboard: Highlight de atraso
       if (fieldId === 'deliveryDate') {
            const todayDate = new Date().toISOString().split('T')[0];
            const isOverdue = value && value < todayDate && request.status !== 'Entregue';
            return (
-               <span className={isOverdue ? 'text-red-500 font-semibold' : 'text-gray-300'}>
+               <span className={isOverdue ? 'text-red-400 font-bold flex items-center gap-1' : 'text-gray-300'}>
+                   {isOverdue && (
+                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                   )}
                    {formatDate(value)}
                </span>
            );
       }
 
-      // Lógica específica do Dashboard: Truncar descrição
       if (fieldId === 'description') {
            return (
                <span className="block max-w-xs truncate text-gray-300" title={String(value)}>
@@ -159,133 +211,213 @@ const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">Bem-vindo, {user?.name.split(' ')[0]}</h1>
-          <p className="text-gray-400">
+          <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard</h1>
+          <p className="text-gray-400 mt-1">
              {hasFullVisibility 
-                ? 'Visão geral de todas as solicitações' 
-                : `Visão geral das solicitações do setor ${user?.sector}`}
+                ? 'Visão geral operacional de todas as áreas.' 
+                : `Painel de controle do setor ${user?.sector}.`}
           </p>
+        </div>
+        <div className="text-right hidden md:block">
+            <p className="text-sm text-gray-400">Última atualização</p>
+            <p className="text-white font-mono text-sm">{new Date().toLocaleTimeString()}</p>
         </div>
       </div>
       
-      {/* Stat Cards */}
+      {/* Stat Cards Dinâmicos */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total de Solicitações" value={total} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>} />
-        <StatCard title="Pendentes" value={pending} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>} />
-        <StatCard title="Em Andamento" value={inProgress} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>} />
-        <StatCard title="Concluídas" value={concluded} icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>} />
+        {/* Card Total (Sempre Fixo) */}
+        <StatCard 
+            title="Total Geral" 
+            value={total} 
+            colorName="blue"
+            icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>} 
+        />
+
+        {/* Cards de Status Dinâmicos */}
+        {statuses.map((status) => (
+            <StatCard 
+                key={status.id}
+                title={status.name} 
+                value={statusCounts[status.name] || 0} 
+                colorName={status.color}
+                icon={getStatusIcon(status.color)} 
+            />
+        ))}
       </div>
 
       {/* --- GRÁFICOS --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Gráfico Mensal */}
-          <div className="bg-zinc-900 shadow-xl rounded-lg p-6 border border-zinc-800">
-              <h3 className="text-lg font-bold text-white mb-6">Solicitações por Mês</h3>
-              <div className="flex items-end justify-between h-48 space-x-2">
-                  {monthlyStats.map((stat, index) => {
-                      const heightPercentage = Math.round((stat.count / maxMonthlyCount) * 100);
+          {/* Gráfico Mensal (Bar Chart) - Ocupa 2/3 */}
+          <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg">
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-lg font-bold text-white flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                    Volume de Solicitações
+                </h3>
+              </div>
+              
+              <div className="relative h-64 w-full pl-8 pb-6 select-none">
+                  {/* Grid Lines & Y-Axis Labels */}
+                  <div className="absolute inset-0 flex flex-col justify-between text-xs text-gray-500 font-mono">
+                      {yAxisSteps.map((step, i) => (
+                          <div key={i} className="relative flex items-center w-full h-0">
+                               <span className="absolute -left-8 w-6 text-right">{Math.round(step)}</span>
+                               <div className="w-full border-t border-zinc-700/50 border-dashed"></div>
+                          </div>
+                      ))}
+                  </div>
+
+                  {/* Bars Container */}
+                  <div className="absolute inset-x-0 bottom-0 top-0 flex items-end justify-around px-2 z-10 pt-2">
+                      {monthlyStats.map((stat, index) => {
+                          const heightPercentage = Math.round((stat.count / yAxisMax) * 100);
+                          const isHovered = hoveredMonth === index;
+                          
+                          return (
+                              <div 
+                                key={index} 
+                                className="flex flex-col items-center flex-1 h-full justify-end group relative"
+                                onMouseEnter={() => setHoveredMonth(index)}
+                                onMouseLeave={() => setHoveredMonth(null)}
+                              >
+                                  {/* Tooltip */}
+                                  <div className={`absolute -top-12 transition-all duration-200 pointer-events-none z-20 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                      <div className="bg-zinc-800 text-white text-xs py-1 px-3 rounded shadow-xl border border-zinc-700 whitespace-nowrap">
+                                          <p className="font-bold">{stat.count} solicitações</p>
+                                          <p className="text-zinc-400 text-[10px]">{stat.fullDate}</p>
+                                      </div>
+                                      {/* Arrow */}
+                                      <div className="w-2 h-2 bg-zinc-800 border-r border-b border-zinc-700 transform rotate-45 mx-auto -mt-1"></div>
+                                  </div>
+
+                                  {/* Bar */}
+                                  <div className="relative w-full max-w-[24px] sm:max-w-[40px] flex items-end h-full">
+                                      <div 
+                                          style={{ height: `${heightPercentage}%` }} 
+                                          className={`w-full rounded-t-sm transition-all duration-500 ease-out 
+                                            ${stat.count > 0 
+                                                ? 'bg-gradient-to-t from-blue-700 via-blue-600 to-indigo-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
+                                                : 'bg-zinc-800 h-1'
+                                            }
+                                            ${isHovered ? 'brightness-110 to-indigo-400' : ''}
+                                          `}
+                                      ></div>
+                                  </div>
+                                  
+                                  {/* X-Axis Label */}
+                                  <span className={`text-xs mt-3 font-medium transition-colors ${isHovered ? 'text-white' : 'text-gray-500'}`}>
+                                      {stat.name.split('/')[0]}
+                                  </span>
+                              </div>
+                          );
+                      })}
+                  </div>
+              </div>
+          </div>
+
+          {/* Gráfico por Setor (Horizontal List) - Ocupa 1/3 */}
+          <div className="lg:col-span-1 bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg flex flex-col">
+              <h3 className="text-lg font-bold text-white mb-6 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
+                  Top Setores
+              </h3>
+              
+              <div className="flex-grow flex flex-col justify-center space-y-5">
+                  {sectorStats.length > 0 ? sectorStats.map((stat, index) => {
+                      const widthPercentage = Math.round((stat.count / maxSectorCount) * 100);
+                      const totalPercentage = Math.round((stat.count / total) * 100) || 0;
+                      
+                      // Cores dinâmicas para o top 3
+                      let barColor = "from-zinc-600 to-zinc-500";
+                      if (index === 0) barColor = "from-emerald-500 to-teal-400";
+                      if (index === 1) barColor = "from-blue-500 to-cyan-400";
+                      if (index === 2) barColor = "from-purple-500 to-indigo-400";
+
                       return (
-                          <div key={index} className="flex flex-col items-center flex-1 group">
-                              <div className="relative w-full flex justify-center items-end h-full">
-                                  <div 
-                                      style={{ height: `${heightPercentage}%` }} 
-                                      className={`w-full max-w-[40px] rounded-t-sm transition-all duration-500 ${stat.count > 0 ? 'bg-blue-600 group-hover:bg-blue-500' : 'bg-zinc-800 h-1'}`}
-                                  ></div>
-                                  {/* Tooltip on hover */}
-                                  <div className="absolute -top-8 bg-zinc-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                      {stat.count}
+                          <div key={index} className="group">
+                              <div className="flex justify-between items-end mb-1">
+                                  <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                                      {stat.name}
+                                  </span>
+                                  <div className="text-right">
+                                      <span className="text-sm font-bold text-white mr-1">{stat.count}</span>
+                                      <span className="text-xs text-gray-500">({totalPercentage}%)</span>
                                   </div>
                               </div>
-                              <span className="text-xs text-gray-400 mt-2 font-medium uppercase">{stat.name.split('/')[0]}</span>
-                          </div>
-                      );
-                  })}
-              </div>
-          </div>
-
-          {/* Gráfico por Setor */}
-          <div className="bg-zinc-900 shadow-xl rounded-lg p-6 border border-zinc-800">
-              <h3 className="text-lg font-bold text-white mb-6">Solicitações por Setor</h3>
-              <div className="space-y-4 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {sectorStats.map((stat, index) => {
-                      const widthPercentage = Math.round((stat.count / total) * 100) || 0;
-                      // Calcular largura relativa ao maior setor para a barra visual ficar boa
-                      const visualWidth = Math.round((stat.count / maxSectorCount) * 100);
-                      
-                      return (
-                          <div key={index}>
-                              <div className="flex justify-between text-sm mb-1">
-                                  <span className="text-gray-300 font-medium">{stat.name}</span>
-                                  <span className="text-gray-400">{stat.count} <span className="text-xs text-zinc-600">({widthPercentage}%)</span></span>
-                              </div>
-                              <div className="w-full bg-zinc-800 rounded-full h-2.5">
+                              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden shadow-inner">
                                   <div 
-                                      className="bg-purple-600 h-2.5 rounded-full transition-all duration-500" 
-                                      style={{ width: `${visualWidth}%` }}
+                                      className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-1000 ease-out`} 
+                                      style={{ width: `${widthPercentage}%` }}
                                   ></div>
                               </div>
                           </div>
                       );
-                  })}
-                  {sectorStats.length === 0 && <p className="text-gray-500 text-sm">Nenhum setor encontrado.</p>}
+                  }) : (
+                      <div className="text-center text-gray-500 py-10">
+                          <p>Nenhum dado disponível.</p>
+                      </div>
+                  )}
               </div>
           </div>
-
       </div>
 
       {/* Recent Requests Table */}
-       <div className="bg-zinc-900 shadow-xl rounded-lg overflow-hidden border border-zinc-800">
-        <div className="p-6 flex justify-between items-center">
-            <div>
-                <h2 className="text-xl font-bold text-white">Solicitações Recentes</h2>
-                <p className="text-sm text-gray-400">
-                    {hasFullVisibility ? 'Todos os setores' : `Setor: ${user?.sector}`}
-                </p>
-            </div>
-          <Button as="link" to="/requests" variant="secondary">Ver Todas</Button>
+       <div className="bg-zinc-900 shadow-lg rounded-xl overflow-hidden border border-zinc-800">
+        <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-800/20">
+            <h2 className="text-lg font-bold text-white flex items-center">
+                 <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                 Solicitações Recentes
+            </h2>
+            <Button as="link" to="/requests" variant="secondary" className="text-xs !py-1.5">Ver Todas</Button>
         </div>
         
         <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-zinc-800">
-                <thead className="bg-zinc-800/50">
+                <thead className="bg-zinc-900">
                     <tr>
                          {visibleColumns.map(field => (
-                             <th key={field.id} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                             <th key={field.id} scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                                 {field.label}
                             </th>
                         ))}
-                        <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Ações</th>
+                        <th scope="col" className="px-6 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider"></th>
                     </tr>
                 </thead>
-                 <tbody className="divide-y divide-zinc-800">
+                 <tbody className="divide-y divide-zinc-800 bg-zinc-900/50">
                     {recentRequests.length > 0 ? recentRequests.map((request) => {
                         return (
-                        <tr key={request.id} className="hover:bg-zinc-800/50 transition-colors">
+                        <tr key={request.id} className="hover:bg-zinc-800 transition-colors group">
                              {visibleColumns.map(field => (
                                 <td key={`${request.id}-${field.id}`} className="px-6 py-4 whitespace-nowrap text-sm">
                                      {field.id === 'orderNumber' ? (
-                                        <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard)}</span>
+                                        <div className="flex items-center">
+                                            <div className="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold text-gray-400 mr-3 border border-zinc-700">
+                                                #{String(getCellValue(request, field.id, field.isStandard)).replace('PED-', '')}
+                                            </div>
+                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard)}</span>
+                                        </div>
                                     ) : (
                                         getCellValue(request, field.id, field.isStandard)
                                     )}
                                 </td>
                             ))}
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <Link to={`/requests/${request.id}`} className="text-blue-400 hover:text-blue-300">
-                                    Ver
+                                <Link to={`/requests/${request.id}`} className="text-blue-400 hover:text-blue-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    Detalhes &rarr;
                                 </Link>
                             </td>
                         </tr>
                         );
                     }) : (
                         <tr>
-                            <td colSpan={visibleColumns.length + 1} className="text-center py-10 text-gray-500">
-                                Nenhuma solicitação encontrada.
+                            <td colSpan={visibleColumns.length + 1} className="text-center py-12 text-gray-500">
+                                <p>Nenhuma solicitação encontrada recentemente.</p>
                             </td>
                         </tr>
                     )}
