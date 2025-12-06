@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Acompanhamento de Solicitações",
+  "description": "Um sistema para acompanhar solicitações de compras e entregas com campos de formulário configuráveis e controle de acesso baseado em função.",
+  "requestFramePermissions": []
+}
