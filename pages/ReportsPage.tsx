@@ -18,9 +18,9 @@ const ReportsPage: React.FC = () => {
   const [startDate, setStartDate] = useState(firstDay.toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(today.toISOString().slice(0, 10));
   
-  // Estado para as colunas selecionadas (começa com todas selecionadas)
+  // Estado para as colunas selecionadas (começa com todas selecionadas, incluindo items e history)
   const [selectedColumnIds, setSelectedColumnIds] = useState<string[]>(
-    formFields.map(f => f.id).concat(['items']) // Adiciona 'items' manualmente pois não é um formField
+    formFields.map(f => f.id).concat(['items', 'history'])
   );
 
   if (!hasFullVisibility) {
@@ -36,7 +36,7 @@ const ReportsPage: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    setSelectedColumnIds(formFields.map(f => f.id).concat(['items']));
+    setSelectedColumnIds(formFields.map(f => f.id).concat(['items', 'history']));
   }
   
   const handleDeselectAll = () => {
@@ -55,11 +55,17 @@ const ReportsPage: React.FC = () => {
         return;
     }
 
-    // 2. Mapear dados baseado nas colunas selecionadas
-    const dataToExport = filteredRequests.map(req => {
+    const workbook = XLSX.utils.book_new();
+
+    // =========================================================
+    // ABA 1: SOLICITAÇÕES (DADOS PRINCIPAIS)
+    // =========================================================
+    
+    // Mapear dados baseado nas colunas selecionadas (exceto histórico, que vai pra outra aba)
+    const mainSheetData = filteredRequests.map(req => {
         const row: any = {};
         
-        // Colunas dinâmicas
+        // Colunas dinâmicas (Campos do formulário)
         formFields.forEach(field => {
             if (selectedColumnIds.includes(field.id)) {
                 let value = field.isStandard 
@@ -83,10 +89,58 @@ const ReportsPage: React.FC = () => {
         return row;
     });
 
-    // 3. Gerar Planilha
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Solicitações");
+    const worksheetMain = XLSX.utils.json_to_sheet(mainSheetData);
+    
+    // Ajuste visual de colunas para a aba principal
+    const wscolsMain = Object.keys(mainSheetData[0] || {}).map(() => ({ wch: 25 }));
+    worksheetMain['!cols'] = wscolsMain;
+
+    XLSX.utils.book_append_sheet(workbook, worksheetMain, "Solicitações");
+
+    // =========================================================
+    // ABA 2: HISTÓRICO DE ALTERAÇÕES (SEPARADA)
+    // =========================================================
+
+    if (selectedColumnIds.includes('history')) {
+        const historySheetData: any[] = [];
+
+        filteredRequests.forEach(req => {
+            const historyList = Array.isArray(req.history) ? req.history : [];
+            
+            // Adiciona cada entrada do histórico como uma linha na nova aba
+            historyList.forEach((h: any) => {
+                historySheetData.push({
+                    'Ref. Pedido': req.orderNumber, // Chave estrangeira visual para ligar à aba principal
+                    'Data/Hora': new Date(h.date).toLocaleString('pt-BR'),
+                    'Usuário': h.user,
+                    'Campo Alterado': h.field,
+                    'Valor Antigo': h.oldValue,
+                    'Valor Novo': h.newValue
+                });
+            });
+        });
+
+        // Só cria a aba se houver histórico para mostrar
+        if (historySheetData.length > 0) {
+            // Ordenar por Pedido e depois por Data (Opcional, mas bom para organização)
+            // historySheetData.sort((a, b) => a['Ref. Pedido'].localeCompare(b['Ref. Pedido'])); 
+
+            const worksheetHistory = XLSX.utils.json_to_sheet(historySheetData);
+            
+            // Ajuste visual de colunas para a aba de histórico
+            const wscolsHist = [
+                { wch: 15 }, // Ref Pedido
+                { wch: 20 }, // Data
+                { wch: 20 }, // Usuário
+                { wch: 20 }, // Campo
+                { wch: 30 }, // Valor Antigo
+                { wch: 30 }  // Valor Novo
+            ];
+            worksheetHistory['!cols'] = wscolsHist;
+
+            XLSX.utils.book_append_sheet(workbook, worksheetHistory, "Histórico Detalhado");
+        }
+    }
 
     // 4. Download
     XLSX.writeFile(workbook, `Relatorio_Suprimentos_${startDate}_a_${endDate}.xlsx`);
@@ -123,7 +177,7 @@ const ReportsPage: React.FC = () => {
 
           <div className="mb-8">
              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-medium text-white">Selecionar Colunas</h3>
+                <h3 className="text-lg font-medium text-white">Selecionar Dados para Exportação</h3>
                 <div className="space-x-2 text-sm">
                     <button onClick={handleSelectAll} className="text-blue-400 hover:text-blue-300">Marcar Todas</button>
                     <span className="text-gray-600">|</span>
@@ -141,7 +195,8 @@ const ReportsPage: React.FC = () => {
                         />
                     </div>
                 ))}
-                {/* Checkbox manual para Itens */}
+                
+                {/* Checkbox especial para Itens */}
                  <div className="flex items-center">
                         <ToggleSwitch 
                             checked={selectedColumnIds.includes('items')}
@@ -149,7 +204,17 @@ const ReportsPage: React.FC = () => {
                             label="Itens da Solicitação"
                         />
                  </div>
+
+                 {/* Checkbox especial para Histórico */}
+                 <div className="flex items-center col-span-2 md:col-span-1 border-t md:border-t-0 border-gray-700 pt-2 md:pt-0">
+                        <ToggleSwitch 
+                            checked={selectedColumnIds.includes('history')}
+                            onChange={(checked) => handleToggleColumn('history', checked)}
+                            label="Histórico (Nova Aba)"
+                        />
+                 </div>
              </div>
+             <p className="text-xs text-gray-500 mt-2">* A opção "Histórico" irá gerar uma segunda aba (planilha) no arquivo Excel com todos os detalhes de auditoria.</p>
           </div>
 
           <div className="flex justify-end">
