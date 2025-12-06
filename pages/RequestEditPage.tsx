@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
@@ -10,7 +9,7 @@ import NotFoundPage from './NotFoundPage';
 const RequestEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getRequestById, updateRequest, formFields, statuses } = useRequests();
+  const { getRequestById, updateRequest, formFields, statuses, loading } = useRequests();
   const { users, sectors, user } = useAuth();
   
   const [requestData, setRequestData] = useState<Partial<Request> | null>(null);
@@ -23,6 +22,12 @@ const RequestEditPage: React.FC = () => {
   useEffect(() => {
     const requestId = Number(id);
     if (requestId) {
+        // Se já temos dados carregados para este ID, não recarregue para evitar sobrescrever o que o usuário está digitando
+        // caso ocorra um update em segundo plano (optimistic update ou realtime).
+        if (requestData && requestData.id === requestId) {
+            return;
+        }
+
         const requestToEdit = getRequestById(requestId);
         if (requestToEdit) {
             // Cria cópias profundas para evitar referência direta e problemas com mutabilidade
@@ -35,7 +40,11 @@ const RequestEditPage: React.FC = () => {
             setInitialItems(JSON.parse(JSON.stringify(requestToEdit.items || [])));
         }
     }
-  }, [id, getRequestById]);
+  }, [id, getRequestById, requestData]); // Dependências ajustadas
+
+  if (loading && !requestData) {
+      return <div className="text-center p-10 text-gray-400">Carregando dados da solicitação...</div>;
+  }
 
   if (!requestData || !initialData) {
     return <NotFoundPage />;

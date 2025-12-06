@@ -3,28 +3,33 @@ import React from 'react';
 import Button from './ui/Button';
 
 const DatabaseSetup: React.FC = () => {
-  const sqlScript = `
+  const sqlScript = `-- =================================================================
+-- SCRIPT DE CRIAÇÃO E CORREÇÃO DO BANCO DE DADOS (SUPRIMENTOS)
+-- Copie e cole este código no SQL Editor do Supabase e clique em RUN.
+-- =================================================================
+
 -- 1. Tabela de Setores
-create table if not exists public.sectors (
-  id text primary key,
-  name text not null,
+CREATE TABLE IF NOT EXISTS public.sectors (
+  id text PRIMARY KEY,
+  name text NOT NULL,
   description text
 );
 
 -- 2. Tabela de Usuários
-create table if not exists public.users (
-  id bigint primary key,
-  name text not null,
-  email text not null,
-  password text not null,
-  role text not null,
+CREATE TABLE IF NOT EXISTS public.users (
+  id bigint PRIMARY KEY,
+  name text NOT NULL,
+  email text NOT NULL,
+  password text NOT NULL,
+  role text NOT NULL,
   sector text
 );
 
 -- 3. Tabela de Solicitações
-create table if not exists public.requests (
-  id bigint primary key,
-  "orderNumber" text not null,
+-- A coluna 'history' é do tipo JSONB para armazenar o array de logs de alteração.
+CREATE TABLE IF NOT EXISTS public.requests (
+  id bigint PRIMARY KEY,
+  "orderNumber" text NOT NULL,
   "requestDate" text,
   requester text,
   sector text,
@@ -33,107 +38,85 @@ create table if not exists public.requests (
   "deliveryDate" text,
   status text,
   responsible text,
-  items jsonb default '[]'::jsonb,
-  "customFields" jsonb default '{}'::jsonb,
-  history jsonb default '[]'::jsonb
+  items jsonb DEFAULT '[]'::jsonb,
+  "customFields" jsonb DEFAULT '{}'::jsonb,
+  history jsonb DEFAULT '[]'::jsonb
 );
 
 -- 4. Tabela de Campos do Formulário
-create table if not exists public.form_fields (
-  id text primary key,
-  label text not null,
-  type text not null,
-  "isActive" boolean default true,
-  required boolean default false,
-  "isStandard" boolean default false,
-  "isVisibleInList" boolean default true,
-  "orderIndex" integer
+CREATE TABLE IF NOT EXISTS public.form_fields (
+  id text PRIMARY KEY,
+  label text NOT NULL,
+  type text NOT NULL,
+  "isActive" boolean DEFAULT true,
+  required boolean DEFAULT false,
+  "isStandard" boolean DEFAULT false,
+  "isVisibleInList" boolean DEFAULT true,
+  "orderIndex" integer DEFAULT 99
 );
 
 -- 5. Tabela de Status
-create table if not exists public.statuses (
-  id text primary key,
-  name text not null,
+CREATE TABLE IF NOT EXISTS public.statuses (
+  id text PRIMARY KEY,
+  name text NOT NULL,
   color text
 );
 
--- 6. Configuração de Permissões (Público para este App de demonstração)
-alter table public.sectors enable row level security;
-alter table public.users enable row level security;
-alter table public.requests enable row level security;
-alter table public.form_fields enable row level security;
-alter table public.statuses enable row level security;
+-- =================================================================
+-- CORREÇÕES DE COLUNAS FALTANTES (Para bancos já criados)
+-- =================================================================
 
-create policy "Enable all access for all users" on public.sectors for all using (true) with check (true);
-create policy "Enable all access for all users" on public.users for all using (true) with check (true);
-create policy "Enable all access for all users" on public.requests for all using (true) with check (true);
-create policy "Enable all access for all users" on public.form_fields for all using (true) with check (true);
-create policy "Enable all access for all users" on public.statuses for all using (true) with check (true);
+-- Adiciona a coluna HISTORY se ela não existir
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='history') THEN
+        ALTER TABLE public.requests ADD COLUMN "history" JSONB DEFAULT '[]'::JSONB;
+    END IF;
+END $$;
 
--- 7. ATUALIZAÇÕES (Execute para migrar bancos existentes)
+-- Garante que o histórico antigo não seja NULL (evita erro no React)
+UPDATE public.requests SET history = '[]'::JSONB WHERE history IS NULL;
 
--- Adiciona coluna de visibilidade
-do $$ 
-begin 
-  if not exists (select 1 from information_schema.columns where table_name='form_fields' and column_name='isVisibleInList') then 
-    alter table public.form_fields add column "isVisibleInList" boolean default true; 
-  end if; 
-end $$;
+-- Adiciona outras colunas essenciais se faltarem
+DO $$
+BEGIN
+    -- Campos na tabela requests
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='description') THEN
+        ALTER TABLE public.requests ADD COLUMN "description" TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='requester') THEN
+        ALTER TABLE public.requests ADD COLUMN "requester" TEXT;
+    END IF;
 
--- Adiciona coluna de ordem
-do $$ 
-begin 
-  if not exists (select 1 from information_schema.columns where table_name='form_fields' and column_name='orderIndex') then 
-    alter table public.form_fields add column "orderIndex" integer; 
-  end if; 
-end $$;
+    -- Campos na tabela form_fields
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='form_fields' AND column_name='isVisibleInList') THEN
+        ALTER TABLE public.form_fields ADD COLUMN "isVisibleInList" BOOLEAN DEFAULT TRUE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='form_fields' AND column_name='orderIndex') THEN
+        ALTER TABLE public.form_fields ADD COLUMN "orderIndex" INTEGER DEFAULT 99;
+    END IF;
+END $$;
 
--- Adiciona coluna de Descrição na tabela de Solicitações
-do $$ 
-begin 
-  if not exists (select 1 from information_schema.columns where table_name='requests' and column_name='description') then 
-    alter table public.requests add column "description" text; 
-  end if; 
-end $$;
+-- =================================================================
+-- POLÍTICAS DE SEGURANÇA (RLS) - Permite acesso público para o app funcionar
+-- =================================================================
+ALTER TABLE public.sectors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_fields ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.statuses ENABLE ROW LEVEL SECURITY;
 
--- Adiciona coluna de Solicitante (Requester) na tabela de Solicitações
-do $$ 
-begin 
-  if not exists (select 1 from information_schema.columns where table_name='requests' and column_name='requester') then 
-    alter table public.requests add column "requester" text; 
-  end if; 
-end $$;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.sectors;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.users;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.requests;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.form_fields;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.statuses;
 
--- Adiciona coluna de Histórico na tabela de Solicitações
-do $$ 
-begin 
-  if not exists (select 1 from information_schema.columns where table_name='requests' and column_name='history') then 
-    alter table public.requests add column "history" jsonb default '[]'::jsonb; 
-  end if; 
-end $$;
-
--- Insere o campo 'description' se não existir
-insert into public.form_fields (id, label, type, "isActive", required, "isStandard", "isVisibleInList", "orderIndex")
-select 'description', 'Descrição', 'text', true, false, true, true, 5
-where not exists (select 1 from public.form_fields where id = 'description');
-
--- Insere o campo 'requester' se não existir
-insert into public.form_fields (id, label, type, "isActive", required, "isStandard", "isVisibleInList", "orderIndex")
-select 'requester', 'Solicitante', 'select', true, true, true, true, 3
-where not exists (select 1 from public.form_fields where id = 'requester');
-
--- Atualiza o rótulo do Responsável para ficar mais claro
-update public.form_fields set label = 'Responsável (Atendimento)' where id = 'responsible';
-
--- Insere setores especiais se não existirem
-insert into public.sectors (id, name, description)
-select 'sector-manager', 'Gerente', 'Gerência Geral - Visão Global'
-where not exists (select 1 from public.sectors where name = 'Gerente');
-
-insert into public.sectors (id, name, description)
-select 'sector-director', 'Diretor', 'Diretoria - Visão Global'
-where not exists (select 1 from public.sectors where name = 'Diretor');
-
+CREATE POLICY "Enable all access for all users" ON public.sectors FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all access for all users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all access for all users" ON public.requests FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all access for all users" ON public.form_fields FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all access for all users" ON public.statuses FOR ALL USING (true) WITH CHECK (true);
 `;
 
   const copyToClipboard = () => {
@@ -146,7 +129,7 @@ where not exists (select 1 from public.sectors where name = 'Diretor');
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-white mb-2">Configuração Inicial do Banco de Dados</h2>
         <p className="text-gray-400">
-          O sistema conectou ao Supabase, mas as tabelas ainda não existem ou precisam de atualização.
+          Utilize o script abaixo para criar as tabelas e colunas necessárias no Supabase.
         </p>
       </div>
 
@@ -156,9 +139,8 @@ where not exists (select 1 from public.sectors where name = 'Diretor');
           <li>Copie o código SQL abaixo.</li>
           <li>Acesse seu projeto no <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="underline hover:text-white">Dashboard do Supabase</a>.</li>
           <li>Vá até a seção <strong>SQL Editor</strong> no menu lateral esquerdo.</li>
-          <li>Clique em <strong>+ New Query</strong>.</li>
           <li>Cole o código e clique em <strong>Run</strong>.</li>
-          <li>Volte aqui e recarregue a página.</li>
+          <li>Se houver sucesso, volte aqui e recarregue a página (F5).</li>
         </ol>
       </div>
 
@@ -178,7 +160,7 @@ where not exists (select 1 from public.sectors where name = 'Diretor');
 
       <div className="mt-6 flex justify-center">
         <Button onClick={() => window.location.reload()}>
-          Já executei o SQL, Recarregar Página
+          Recarregar Aplicação
         </Button>
       </div>
     </div>
