@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Request, FormField, Status } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { initialFormFields, initialStatuses } from '../constants';
@@ -33,7 +32,13 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   const fetchRequests = async () => {
       const { data, error } = await supabase.from('requests').select('*').order('id', { ascending: false });
       if (data && !error) {
-          setRequests(data);
+          // Normaliza os dados para garantir que history seja um array válido
+          const safeData = data.map((req: any) => ({
+              ...req,
+              history: Array.isArray(req.history) ? req.history : [],
+              items: Array.isArray(req.items) ? req.items : []
+          }));
+          setRequests(safeData);
       } else {
           // Ignora se o erro for tabela inexistente (AuthContext já trata isso)
           if (error && error.code !== 'PGRST205' && error.code !== '42P01') {
@@ -63,9 +68,8 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
                 const descField = initialFormFields.find(f => f.id === 'description');
                 if (descField) {
                     sanitizedFields.push(descField);
-                    // Tenta inserir, mas se falhar por coluna inexistente, loga erro silencioso
                     supabase.from('form_fields').insert(descField).then(({ error }) => {
-                        if (error) console.warn("Falha ao auto-inserir description (pode faltar coluna no DB):", error.message);
+                        if (error) console.warn("Falha ao auto-inserir description:", error.message);
                     });
                 }
             }
@@ -154,13 +158,13 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
   }, []);
 
-  const getRequestById = (id: number): Request | undefined => {
+  // Usa useCallback para que a função seja estável e não cause re-renderizações desnecessárias em efeitos
+  const getRequestById = useCallback((id: number): Request | undefined => {
     return requests.find(r => r.id === id);
-  };
+  }, [requests]);
 
   const addRequest = async (request: Omit<Request, 'id'>) => {
     const newRequest = { ...request, id: Date.now() }; 
-    // Atualização otimista: atualiza o estado local imediatamente
     setRequests(prev => [newRequest as Request, ...prev]);
     
     const { error } = await supabase.from('requests').insert(newRequest);
@@ -171,13 +175,12 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const updateRequest = async (id: number, updatedRequest: Partial<Request>) => {
-    // 1. Atualização Otimista (UI primeiro) para responsividade
+    // 1. Atualização Otimista
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updatedRequest } : r));
 
     try {
         // 2. Preparar Payload Seguro (Allow-list)
-        // Isso remove qualquer propriedade extra que o objeto 'Request' possa ter em memória
-        // e que não existe no banco de dados, evitando erros de "Column does not exist".
+        // Definimos explicitamente apenas os campos que existem na tabela para evitar erro 400
         const dbPayload: any = {
             orderNumber: updatedRequest.orderNumber,
             requestDate: updatedRequest.requestDate,
@@ -190,11 +193,10 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
             responsible: updatedRequest.responsible,
             items: updatedRequest.items,
             customFields: updatedRequest.customFields,
-            history: updatedRequest.history
+            history: updatedRequest.history // Garante que history seja enviado
         };
 
-        // 3. Limpeza: Remover chaves que são estritamente 'undefined'
-        // O Supabase/PostgREST aceita null, mas comportamento com undefined pode variar no client.
+        // 3. Limpeza: Remover chaves estritamente undefined
         Object.keys(dbPayload).forEach(key => {
             if (dbPayload[key] === undefined) {
                 delete dbPayload[key];
@@ -206,97 +208,73 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
         
         if (error) {
             console.error("Supabase Error Details:", error);
-            
-            // Tratamento Específico para Coluna Inexistente (Código 42703)
             if (error.code === '42703') {
-                alert(`ERRO DE BANCO DE DADOS: O sistema tentou salvar um campo que não existe na tabela (ex: 'history' ou 'description').\n\nSolução: Por favor, execute o script SQL de atualização na tela de Login/Configurações.`);
+                alert(`ERRO DE BANCO: Coluna inexistente. Por favor, execute o script SQL de atualização em Configurações.`);
             } else {
-                alert(`Erro ao salvar no banco: ${error.message} (Código: ${error.code})`);
+                alert(`Erro ao salvar no banco: ${error.message}`);
             }
             throw error;
         }
     } catch (err) {
         console.error("Erro ao salvar atualização no banco:", err);
-        // O throw permite que a UI (botão de salvar) saiba que falhou
         throw err;
     }
   };
 
   const deleteRequest = async (id: number) => {
-    // Atualização otimista
     setRequests(prev => prev.filter(r => r.id !== id));
-
     await supabase.from('requests').delete().eq('id', id);
   };
   
   const updateFormFields = async (fields: FormField[]) => {
-    // Atualização otimista
     setFormFields(fields);
-
     for (const field of fields) {
         const { error } = await supabase.from('form_fields').upsert(field);
-        if (error) {
-            console.error("Erro ao atualizar campo:", error);
-            if (error.code === '42703') {
-                alert("Erro: O banco de dados está desatualizado (coluna faltando em form_fields). Execute o SQL de configuração novamente.");
-                break;
-            }
+        if (error && error.code === '42703') {
+             alert("Erro: Coluna faltante em form_fields. Execute o SQL de configuração.");
+             break;
         }
     }
   };
 
   const addFormField = async (field: Pick<FormField, 'label' | 'type'>) => {
-    // Calcula próximo orderIndex
     const maxOrder = Math.max(...formFields.map(f => f.orderIndex || 0), 0);
-    
     const newField: FormField = {
       ...field,
       id: `custom-${Date.now()}`,
       isActive: true,
       required: false,
       isStandard: false,
-      isVisibleInList: true, // Default to true for new fields
+      isVisibleInList: true,
       orderIndex: maxOrder + 1
     };
-    // Atualização otimista
     setFormFields(prev => [...prev, newField]);
-
     await supabase.from('form_fields').insert(newField);
   };
 
   const updateFormField = async (id: string, updatedField: Partial<FormField>) => {
-    // Atualização otimista
     setFormFields(prev => prev.map(f => f.id === id ? { ...f, ...updatedField } : f));
-
     await supabase.from('form_fields').update(updatedField).eq('id', id);
   };
 
   const deleteFormField = async (id: string) => {
-    // Atualização otimista
     setFormFields(prev => prev.filter(f => f.id !== id));
-
     await supabase.from('form_fields').delete().eq('id', id);
   };
 
   const addStatus = async (status: Omit<Status, 'id'>) => {
     const newStatus = { ...status, id: `status-${Date.now()}` };
-    // Atualização otimista
     setStatuses(prev => [...prev, newStatus]);
-
     await supabase.from('statuses').insert(newStatus);
   };
 
   const updateStatus = async (id: string, updatedStatus: Partial<Status>) => {
-    // Atualização otimista
     setStatuses(prev => prev.map(s => s.id === id ? { ...s, ...updatedStatus } : s));
-
     await supabase.from('statuses').update(updatedStatus).eq('id', id);
   };
 
   const deleteStatus = async (id: string) => {
-    // Atualização otimista
     setStatuses(prev => prev.filter(s => s.id !== id));
-
     await supabase.from('statuses').delete().eq('id', id);
   };
 
