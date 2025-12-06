@@ -18,6 +18,7 @@ const RequestEditPage: React.FC = () => {
   const [items, setItems] = useState<RequestItem[]>([]);
   const [initialItems, setInitialItems] = useState<RequestItem[]>([]);
   const [newItem, setNewItem] = useState({ name: '', quantity: 1, status: statuses[0]?.name || '' });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const requestId = Number(id);
@@ -73,9 +74,10 @@ const RequestEditPage: React.FC = () => {
     setItems(items.filter(item => item.id !== id));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (requestData && requestData.id && initialData) {
+        setIsSaving(true);
         // --- Lógica de Auditoria (Diff) ---
         const historyEntries: RequestHistoryEntry[] = requestData.history || [];
         const now = new Date().toISOString();
@@ -110,8 +112,6 @@ const RequestEditPage: React.FC = () => {
         });
 
         // 2. Verificar Itens
-        // Simplificação: Compara o JSON string. Se diferente, registra que itens mudaram.
-        // Para uma auditoria item a item seria necessário um algoritmo mais complexo de diff de arrays.
         const oldItemsStr = JSON.stringify(initialItems);
         const newItemsStr = JSON.stringify(items);
         
@@ -125,8 +125,9 @@ const RequestEditPage: React.FC = () => {
             });
         }
 
-        // Salvar
-        updateRequest(requestData.id, { ...requestData, items, history: historyEntries });
+        // Salvar (Aguardar Promise do Contexto)
+        await updateRequest(requestData.id, { ...requestData, items, history: historyEntries });
+        setIsSaving(false);
         navigate(`/requests/${requestData.id}`, { replace: true });
     }
   };
@@ -236,8 +237,8 @@ const RequestEditPage: React.FC = () => {
         </div>
         
         <div className="p-6 bg-zinc-800/50 flex justify-end space-x-2">
-          <Button type="button" variant="secondary" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button type="submit">Salvar Alterações</Button>
+          <Button type="button" variant="secondary" onClick={() => navigate(-1)} disabled={isSaving}>Cancelar</Button>
+          <Button type="submit" disabled={isSaving}>{isSaving ? 'Salvando...' : 'Salvar Alterações'}</Button>
         </div>
       </form>
     </div>

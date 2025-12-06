@@ -166,10 +166,24 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const updateRequest = async (id: number, updatedRequest: Partial<Request>) => {
-    // Atualização otimista
+    // 1. Remove o ID do payload para evitar erros de update na Primary Key
+    const { id: _, ...payload } = updatedRequest;
+
+    // 2. Atualização Otimista (UI primeiro)
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updatedRequest } : r));
 
-    await supabase.from('requests').update(updatedRequest).eq('id', id);
+    try {
+        // 3. Atualização no Banco
+        const { error } = await supabase.from('requests').update(payload).eq('id', id);
+        
+        if (error) {
+            throw error;
+        }
+    } catch (err) {
+        console.error("Erro ao salvar atualização no banco:", err);
+        // Opcional: Reverter estado aqui ou notificar usuário
+        alert("Houve um erro ao salvar as alterações. Verifique sua conexão.");
+    }
   };
 
   const deleteRequest = async (id: number) => {
@@ -177,11 +191,6 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
     setRequests(prev => prev.filter(r => r.id !== id));
 
     await supabase.from('requests').delete().eq('id', id);
-  };
-  
-  const moveField = async (index: number, direction: 'up' | 'down') => {
-       // Função auxiliar para reordenar (apenas estado local para UI rápida, a persistência é via updateFormFields)
-       // Implementado no componente SettingsPage, mas a lógica de banco pode ser abstraída aqui futuramente
   };
   
   const updateFormFields = async (fields: FormField[]) => {
