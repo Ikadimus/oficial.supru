@@ -62,3 +62,14 @@ export interface Sector {
   name: string;
   description: string;
 }
+
+export interface Supplier {
+  id: string;
+  name: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  category?: string;
+  rating?: number; // 1 a 5
+  notes?: string;
+}

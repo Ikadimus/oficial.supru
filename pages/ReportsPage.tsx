@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,6 +42,14 @@ const ReportsPage: React.FC = () => {
     setSelectedColumnIds([]);
   }
 
+  // Formatação de data auxiliar para Excel
+  const formatDateBr = (dateStr: string) => {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      if(year && month && day) return `${day}/${month}/${year}`;
+      return dateStr;
+  }
+
   const generateExcel = () => {
     // 1. Filtrar por data
     const filteredRequests = requests.filter(req => {
@@ -72,8 +79,14 @@ const ReportsPage: React.FC = () => {
                     ? (req as any)[field.id] 
                     : req.customFields?.[field.id];
                 
-                // Formatação básica
+                // Formatação
                 if (value === undefined || value === null) value = '';
+
+                // Se for data, formatar
+                if (field.type === 'date' || field.id === 'requestDate' || field.id === 'deliveryDate') {
+                    value = formatDateBr(value);
+                }
+
                 row[field.label] = value;
             }
         });
@@ -122,9 +135,6 @@ const ReportsPage: React.FC = () => {
 
         // Só cria a aba se houver histórico para mostrar
         if (historySheetData.length > 0) {
-            // Ordenar por Pedido e depois por Data (Opcional, mas bom para organização)
-            // historySheetData.sort((a, b) => a['Ref. Pedido'].localeCompare(b['Ref. Pedido'])); 
-
             const worksheetHistory = XLSX.utils.json_to_sheet(historySheetData);
             
             // Ajuste visual de colunas para a aba de histórico

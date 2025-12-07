@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
@@ -26,8 +25,10 @@ const StatusBadge: React.FC<{ statusName: string }> = ({ statusName }) => {
 
 const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '';
+    if (dateString.includes('/') && dateString.length === 10) return dateString;
     try {
         const [year, month, day] = dateString.split('-');
+        if (!day || !month || !year) return dateString;
         return `${day}/${month}/${year}`;
     } catch (e) {
         return dateString;
@@ -95,14 +96,14 @@ const RequestListPage: React.FC = () => {
   // Get columns that should be visible in the list
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
 
-  const getCellValue = (request: any, fieldId: string, isStandard: boolean) => {
+  const getCellValue = (request: any, fieldId: string, isStandard: boolean, fieldType?: string) => {
       const value = isStandard ? request[fieldId] : request.customFields?.[fieldId];
       if (value === undefined || value === null) return '-';
       
       if (fieldId === 'status') {
           return <StatusBadge statusName={value} />;
       }
-      if (fieldId === 'requestDate' || fieldId === 'deliveryDate' || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))) {
+      if (fieldType === 'date' || fieldId === 'requestDate' || fieldId === 'deliveryDate') {
           return <span className="text-gray-300">{formatDate(value)}</span>;
       }
       return <span className="text-gray-300">{value}</span>;
@@ -157,9 +158,9 @@ const RequestListPage: React.FC = () => {
                                 {visibleColumns.map(field => (
                                     <td key={`${request.id}-${field.id}`} className="px-6 py-4 whitespace-nowrap text-sm">
                                         {field.id === 'orderNumber' ? (
-                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard)}</span>
+                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard, field.type)}</span>
                                         ) : (
-                                            getCellValue(request, field.id, field.isStandard)
+                                            getCellValue(request, field.id, field.isStandard, field.type)
                                         )}
                                     </td>
                                 ))}

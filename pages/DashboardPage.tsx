@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
@@ -77,10 +76,18 @@ const StatusBadge: React.FC<{ statusName: string }> = ({ statusName }) => {
     );
 };
 
+// Formata data para DD/MM/AAAA (Br)
 const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
+    // Se já estiver em formato BR, retorna
+    if (dateString.includes('/') && dateString.length === 10) return dateString;
+    
+    // Divide por traço para evitar timezone offset de 'new Date()'
     const [year, month, day] = dateString.split('-');
-    return `${day}/${month}/${year}`;
+    if(day && month && year) {
+        return `${day}/${month}/${year}`;
+    }
+    return dateString;
 }
 
 const DashboardPage: React.FC = () => {
@@ -175,7 +182,7 @@ const DashboardPage: React.FC = () => {
   const recentRequests = filteredRequests.slice(0, 5);
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
 
-  const getCellValue = (request: any, fieldId: string, isStandard: boolean) => {
+  const getCellValue = (request: any, fieldId: string, isStandard: boolean, fieldType?: string) => {
       const value = isStandard ? request[fieldId] : request.customFields?.[fieldId];
       if (value === undefined || value === null) return '-';
       
@@ -183,6 +190,7 @@ const DashboardPage: React.FC = () => {
           return <StatusBadge statusName={String(value)} />;
       }
 
+      // Verificação específica para entrega
       if (fieldId === 'deliveryDate') {
            const todayDate = new Date().toISOString().split('T')[0];
            const isOverdue = value && value < todayDate && request.status !== 'Entregue';
@@ -204,9 +212,11 @@ const DashboardPage: React.FC = () => {
            )
       }
 
-      if (fieldId === 'requestDate' || (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value))) {
-          return <span className="text-gray-300">{formatDate(value)}</span>;
+      // Se for campo de data (padrão ou custom)
+      if (fieldType === 'date' || fieldId === 'requestDate') {
+           return <span className="text-gray-300">{formatDate(value)}</span>;
       }
+
       return <span className="text-gray-300">{value}</span>;
   };
 
@@ -400,10 +410,10 @@ const DashboardPage: React.FC = () => {
                                             <div className="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold text-gray-400 mr-3 border border-zinc-700">
                                                 #{String(getCellValue(request, field.id, field.isStandard)).replace('PED-', '')}
                                             </div>
-                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard)}</span>
+                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard, field.type)}</span>
                                         </div>
                                     ) : (
-                                        getCellValue(request, field.id, field.isStandard)
+                                        getCellValue(request, field.id, field.isStandard, field.type)
                                     )}
                                 </td>
                             ))}

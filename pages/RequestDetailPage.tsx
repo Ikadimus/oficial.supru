@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
@@ -62,16 +61,31 @@ const RequestDetailPage: React.FC = () => {
 
   const visibleFields = formFields.filter(f => f.isActive);
 
-  const renderFieldValue = (fieldId: string, value: any) => {
+  // Formata data para DD/MM/AAAA
+  const formatDate = (dateStr: string) => {
+      if (!dateStr) return 'N/A';
+      if (dateStr.includes('T')) {
+          // É formato ISO (ex: histórico), converte com hora
+          return new Date(dateStr).toLocaleString('pt-BR');
+      }
+      // Data simples YYYY-MM-DD
+      const [year, month, day] = dateStr.split('-');
+      if (year && month && day) return `${day}/${month}/${year}`;
+      return dateStr;
+  }
+
+  const renderFieldValue = (field: any, value: any) => {
       if (value === undefined || value === null || value === '') return <span className="text-gray-400 italic">Não informado</span>;
-       if (fieldId === 'status') {
+      
+      if (field.id === 'status') {
           return <StatusBadge statusName={String(value)} />;
       }
+      
+      if (field.type === 'date' || field.id === 'requestDate' || field.id === 'deliveryDate') {
+          return formatDate(String(value));
+      }
+
       return String(value);
-  }
-  
-  const formatDate = (dateStr: string) => {
-      return new Date(dateStr).toLocaleString('pt-BR');
   }
 
   return (
@@ -106,7 +120,7 @@ const RequestDetailPage: React.FC = () => {
                         <div key={field.id} className={`${field.id === 'description' || field.type === 'textarea' ? 'col-span-1 md:col-span-2' : 'col-span-1'}`}>
                             <dt className="text-sm font-medium text-gray-400">{field.label}</dt>
                             <dd className={`mt-1 text-sm text-gray-100 ${field.id === 'description' || field.type === 'textarea' ? 'whitespace-pre-wrap' : ''}`}>
-                                {renderFieldValue(field.id, (request as any)[field.id] || request.customFields?.[field.id])}
+                                {renderFieldValue(field, (request as any)[field.id] || request.customFields?.[field.id])}
                             </dd>
                         </div>
                     ))}

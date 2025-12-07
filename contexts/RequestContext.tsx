@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { Request, FormField, Status } from '../types';
+import { Request, FormField, Status, Supplier } from '../types';
 import { supabase } from '../lib/supabaseClient';
 import { initialFormFields, initialStatuses } from '../constants';
 
@@ -7,8 +7,10 @@ interface RequestContextType {
   requests: Request[];
   formFields: FormField[];
   statuses: Status[];
+  suppliers: Supplier[];
   loading: boolean;
   getRequestById: (id: number) => Request | undefined;
+  getSupplierById: (id: string) => Supplier | undefined;
   addRequest: (request: Omit<Request, 'id'>) => Promise<void>;
   updateRequest: (id: number, updatedRequest: Partial<Request>) => Promise<void>;
   deleteRequest: (id: number) => Promise<void>;
@@ -19,6 +21,9 @@ interface RequestContextType {
   addStatus: (status: Omit<Status, 'id'>) => Promise<void>;
   updateStatus: (id: string, updatedStatus: Partial<Status>) => Promise<void>;
   deleteStatus: (id: string) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
+  updateSupplier: (id: string, updatedSupplier: Partial<Supplier>) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
 }
 
 const RequestContext = createContext<RequestContextType | undefined>(undefined);
@@ -27,6 +32,7 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [requests, setRequests] = useState<Request[]>([]);
   const [formFields, setFormFields] = useState<FormField[]>([]);
   const [statuses, setStatuses] = useState<Status[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRequests = async () => {
@@ -115,6 +121,15 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
             const { data: newStatuses } = await supabase.from('statuses').select('*');
             if(newStatuses) setStatuses(newStatuses);
         }
+
+        // --- SUPPLIERS ---
+        const { data: suppliersData, error: suppliersError } = await supabase.from('suppliers').select('*');
+        if (suppliersError && suppliersError.code !== 'PGRST205' && suppliersError.code !== '42P01') {
+             // Apenas loga erro real
+        } else if (suppliersData) {
+            setSuppliers(suppliersData);
+        }
+
       } catch (e) {
           console.log("Aguardando configuração do banco...");
       }
@@ -150,11 +165,19 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
         fetchConfigs();
       })
       .subscribe();
+      
+    const suppliersChannel = supabase
+      .channel('public:suppliers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, () => {
+        fetchConfigs();
+      })
+      .subscribe();
 
     return () => {
       supabase.removeChannel(requestsChannel);
       supabase.removeChannel(fieldsChannel);
       supabase.removeChannel(statusesChannel);
+      supabase.removeChannel(suppliersChannel);
     };
   }, []);
 
@@ -162,6 +185,10 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   const getRequestById = useCallback((id: number): Request | undefined => {
     return requests.find(r => r.id === id);
   }, [requests]);
+
+  const getSupplierById = useCallback((id: string): Supplier | undefined => {
+    return suppliers.find(s => s.id === id);
+  }, [suppliers]);
 
   const addRequest = async (request: Omit<Request, 'id'>) => {
     const newRequest = { ...request, id: Date.now() }; 
@@ -278,8 +305,28 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
     await supabase.from('statuses').delete().eq('id', id);
   };
 
+  // --- SUPPLIER FUNCTIONS ---
+  const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
+      const newSupplier = { ...supplier, id: `supp-${Date.now()}` };
+      setSuppliers(prev => [...prev, newSupplier]);
+      const { error } = await supabase.from('suppliers').insert(newSupplier);
+      if (error && error.code === '42P01') {
+          alert("Tabela 'suppliers' não existe. Execute o script de banco de dados.");
+      }
+  };
+
+  const updateSupplier = async (id: string, updatedSupplier: Partial<Supplier>) => {
+      setSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...updatedSupplier } : s));
+      await supabase.from('suppliers').update(updatedSupplier).eq('id', id);
+  };
+
+  const deleteSupplier = async (id: string) => {
+      setSuppliers(prev => prev.filter(s => s.id !== id));
+      await supabase.from('suppliers').delete().eq('id', id);
+  };
+
   return (
-    <RequestContext.Provider value={{ requests, formFields, statuses, loading, getRequestById, addRequest, updateRequest, deleteRequest, updateFormFields, addFormField, updateFormField, deleteFormField, addStatus, updateStatus, deleteStatus }}>
+    <RequestContext.Provider value={{ requests, formFields, statuses, suppliers, loading, getRequestById, getSupplierById, addRequest, updateRequest, deleteRequest, updateFormFields, addFormField, updateFormField, deleteFormField, addStatus, updateStatus, deleteStatus, addSupplier, updateSupplier, deleteSupplier }}>
       {children}
     </RequestContext.Provider>
   );

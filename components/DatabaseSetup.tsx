@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Button from './ui/Button';
 
@@ -62,6 +61,18 @@ CREATE TABLE IF NOT EXISTS public.statuses (
   color text
 );
 
+-- 6. Tabela de Fornecedores (NOVA)
+CREATE TABLE IF NOT EXISTS public.suppliers (
+  id text PRIMARY KEY,
+  name text NOT NULL,
+  "contactName" text,
+  email text,
+  phone text,
+  category text,
+  rating integer DEFAULT 0,
+  notes text
+);
+
 -- =================================================================
 -- CORREÇÕES DE COLUNAS FALTANTES (Para bancos já criados)
 -- =================================================================
@@ -105,18 +116,21 @@ ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.form_fields ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statuses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.sectors;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.users;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.requests;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.form_fields;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.statuses;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.suppliers;
 
 CREATE POLICY "Enable all access for all users" ON public.sectors FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.requests FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.form_fields FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.statuses FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all access for all users" ON public.suppliers FOR ALL USING (true) WITH CHECK (true);
 `;
 
   const copyToClipboard = () => {
