@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS public.statuses (
 CREATE TABLE IF NOT EXISTS public.suppliers (
   id text PRIMARY KEY,
   name text NOT NULL,
-  "contactName" text,
+  "contactName" text, -- Nome em CamelCase precisa de aspas
   email text,
   phone text,
   category text,

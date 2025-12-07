@@ -308,16 +308,59 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   // --- SUPPLIER FUNCTIONS ---
   const addSupplier = async (supplier: Omit<Supplier, 'id'>) => {
       const newSupplier = { ...supplier, id: `supp-${Date.now()}` };
+      // 1. Otimista
       setSuppliers(prev => [...prev, newSupplier]);
-      const { error } = await supabase.from('suppliers').insert(newSupplier);
-      if (error && error.code === '42P01') {
-          alert("Tabela 'suppliers' não existe. Execute o script de banco de dados.");
+
+      // 2. Payload Cleaning
+      const dbPayload = {
+          id: newSupplier.id,
+          name: newSupplier.name,
+          "contactName": newSupplier.contactName || null, // Aspas para CamelCase
+          email: newSupplier.email || null,
+          phone: newSupplier.phone || null,
+          category: newSupplier.category || null,
+          rating: newSupplier.rating || 0,
+          notes: newSupplier.notes || null
+      };
+
+      const { error } = await supabase.from('suppliers').insert(dbPayload);
+      if (error) {
+          console.error("Erro ao adicionar fornecedor:", error);
+          if (error.code === '42P01') {
+              alert("A tabela 'suppliers' não existe no banco. Por favor, vá em Login > Configurar > Copiar SQL e execute no Supabase.");
+          } else if (error.code === '42703') {
+              alert("Erro de coluna. Execute o script SQL novamente para atualizar a tabela.");
+          } else {
+             alert(`Erro ao salvar fornecedor: ${error.message}`);
+          }
       }
   };
 
   const updateSupplier = async (id: string, updatedSupplier: Partial<Supplier>) => {
+      // 1. Otimista
       setSuppliers(prev => prev.map(s => s.id === id ? { ...s, ...updatedSupplier } : s));
-      await supabase.from('suppliers').update(updatedSupplier).eq('id', id);
+      
+      // 2. Payload Cleaning (Garante que só envia colunas válidas)
+      const dbPayload: any = {
+          name: updatedSupplier.name,
+          "contactName": updatedSupplier.contactName, // Aspas para CamelCase
+          email: updatedSupplier.email,
+          phone: updatedSupplier.phone,
+          category: updatedSupplier.category,
+          rating: updatedSupplier.rating,
+          notes: updatedSupplier.notes
+      };
+
+      // Remove undefined para não enviar null se não foi alterado
+      Object.keys(dbPayload).forEach(key => {
+        if (dbPayload[key] === undefined) delete dbPayload[key];
+      });
+
+      const { error } = await supabase.from('suppliers').update(dbPayload).eq('id', id);
+       if (error) {
+          console.error("Erro ao atualizar fornecedor:", error);
+          alert(`Erro ao salvar edição: ${error.message}`);
+      }
   };
 
   const deleteSupplier = async (id: string) => {
@@ -335,7 +378,7 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
 export const useRequests = () => {
   const context = useContext(RequestContext);
   if (context === undefined) {
-    throw new Error('useRequests must be used within a RequestProvider');
+    throw new Error('useRequests must be used within an RequestProvider');
   }
   return context;
 };
