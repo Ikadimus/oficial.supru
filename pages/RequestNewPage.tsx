@@ -19,6 +19,7 @@ const RequestNewPage: React.FC = () => {
     supplier: '',
     description: '',
     deliveryDate: '',
+    purchaseOrderDate: '', // Inicializa vazio
     status: statuses[0]?.name || '',
     responsible: '', // Responsável = Vazio inicialmente (quem vai atender)
     items: [],

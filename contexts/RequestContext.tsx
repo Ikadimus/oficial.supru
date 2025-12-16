@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Request, FormField, Status, Supplier } from '../types';
 import { supabase } from '../lib/supabaseClient';
@@ -48,7 +49,7 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
       } else {
           // Ignora se o erro for tabela inexistente (AuthContext já trata isso)
           if (error && error.code !== 'PGRST205' && error.code !== '42P01') {
-             console.error("Erro ao buscar solicitações:", JSON.stringify(error));
+             console.error("Erro ao buscar solicitações:", JSON.stringify(error, null, 2));
           }
       }
   };
@@ -59,7 +60,7 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
         const { data: fieldsData, error: fieldsError } = await supabase.from('form_fields').select('*');
         
         if (fieldsError && fieldsError.code !== 'PGRST205' && fieldsError.code !== '42P01') {
-             console.error("Erro ao buscar campos:", fieldsError);
+             console.error("Erro ao buscar campos:", JSON.stringify(fieldsError, null, 2));
         } else if (fieldsData && fieldsData.length > 0) {
             // Garante que o campo isVisibleInList e orderIndex existam
             let sanitizedFields = fieldsData.map((f: any) => ({
@@ -88,6 +89,18 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
                     sanitizedFields.push(reqField);
                     supabase.from('form_fields').insert(reqField).then(({ error }) => {
                          if (error) console.warn("Falha ao auto-inserir requester:", error.message);
+                    });
+                }
+            }
+
+            // --- CORREÇÃO AUTOMÁTICA DE CAMPO DATA DA OC ---
+            const hasPO = sanitizedFields.some((f: any) => f.id === 'purchaseOrderDate');
+            if (!hasPO) {
+                const poField = initialFormFields.find(f => f.id === 'purchaseOrderDate');
+                if (poField) {
+                    sanitizedFields.push(poField);
+                    supabase.from('form_fields').insert(poField).then(({ error }) => {
+                         if (error) console.warn("Falha ao auto-inserir purchaseOrderDate:", error.message);
                     });
                 }
             }
@@ -196,8 +209,12 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     const { error } = await supabase.from('requests').insert(newRequest);
     if (error) {
-        console.error("Erro ao criar solicitação:", error);
-        alert(`Erro ao criar: ${error.message}`);
+        console.error("Erro ao criar solicitação:", JSON.stringify(error, null, 2));
+        if (error.code === '42703') {
+             alert(`ERRO DE BANCO: Coluna inexistente. Execute o script SQL em Configurações.`);
+        } else {
+             alert(`Erro ao criar: ${error.message || JSON.stringify(error)}`);
+        }
     }
   };
 
@@ -215,6 +232,7 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
             sector: updatedRequest.sector,
             supplier: updatedRequest.supplier,
             description: updatedRequest.description,
+            purchaseOrderDate: updatedRequest.purchaseOrderDate, // Assegura envio
             deliveryDate: updatedRequest.deliveryDate,
             status: updatedRequest.status,
             responsible: updatedRequest.responsible,
@@ -234,11 +252,11 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
         const { error } = await supabase.from('requests').update(dbPayload).eq('id', id);
         
         if (error) {
-            console.error("Supabase Error Details:", error);
+            console.error("Supabase Error Details:", JSON.stringify(error, null, 2));
             if (error.code === '42703') {
                 alert(`ERRO DE BANCO: Coluna inexistente. Por favor, execute o script SQL de atualização em Configurações.`);
             } else {
-                alert(`Erro ao salvar no banco: ${error.message}`);
+                alert(`Erro ao salvar no banco: ${error.message || JSON.stringify(error)}`);
             }
             throw error;
         }

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,6 +41,9 @@ const RequestListPage: React.FC = () => {
   const { requests, loading, formFields } = useRequests();
   const { user, isPrivilegedUser, hasFullVisibility } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estado para ordenação
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
 
   if (loading) {
     return <div className="text-center p-10 text-gray-400">Carregando solicitações...</div>;
@@ -65,7 +69,8 @@ const RequestListPage: React.FC = () => {
           request.sector,
           request.status,
           request.requestDate,
-          request.deliveryDate
+          request.deliveryDate,
+          request.purchaseOrderDate
       ];
 
       const matchesMain = mainFieldsToCheck.some(val => 
@@ -92,6 +97,62 @@ const RequestListPage: React.FC = () => {
 
       return false;
   });
+  
+  // Função para lidar com a ordenação
+  const sortedRequests = useMemo(() => {
+    let sortableItems = [...filteredRequests];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        // Encontra a definição do campo para saber se é padrão ou customizado
+        const field = formFields.find(f => f.id === sortConfig.key);
+        const isStandard = field ? field.isStandard : true; // Fallback to standard if field not found in definitions but key exists (e.g. id)
+
+        let aValue = isStandard ? (a as any)[sortConfig.key] : a.customFields?.[sortConfig.key];
+        let bValue = isStandard ? (b as any)[sortConfig.key] : b.customFields?.[sortConfig.key];
+
+        // Trata nulos/undefined
+        if (aValue === undefined || aValue === null) aValue = '';
+        if (bValue === undefined || bValue === null) bValue = '';
+
+        // Tenta comparar como número se possível
+        const aNum = parseFloat(aValue);
+        const bNum = parseFloat(bValue);
+
+        // Se ambos forem números válidos e a string original não estiver vazia, compara numericamente
+        if (!isNaN(aNum) && !isNaN(bNum) && String(aValue).trim() !== '' && String(bValue).trim() !== '') {
+             if (aNum < bNum) return sortConfig.direction === 'asc' ? -1 : 1;
+             if (aNum > bNum) return sortConfig.direction === 'asc' ? 1 : -1;
+             return 0;
+        }
+
+        // Comparação de Strings
+        const aString = String(aValue).toLowerCase();
+        const bString = String(bValue).toLowerCase();
+
+        if (aString < bString) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aString > bString) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredRequests, sortConfig, formFields]);
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key: string) => {
+      if (!sortConfig || sortConfig.key !== key) return <span className="text-gray-600 ml-1">⇅</span>;
+      return sortConfig.direction === 'asc' ? <span className="text-blue-400 ml-1">↑</span> : <span className="text-blue-400 ml-1">↓</span>;
+  }
 
   // Get columns that should be visible in the list
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
@@ -103,7 +164,7 @@ const RequestListPage: React.FC = () => {
       if (fieldId === 'status') {
           return <StatusBadge statusName={value} />;
       }
-      if (fieldType === 'date' || fieldId === 'requestDate' || fieldId === 'deliveryDate') {
+      if (fieldType === 'date' || fieldId === 'requestDate' || fieldId === 'deliveryDate' || fieldId === 'purchaseOrderDate') {
           return <span className="text-gray-300">{formatDate(value)}</span>;
       }
       return <span className="text-gray-300">{value}</span>;
@@ -133,7 +194,7 @@ const RequestListPage: React.FC = () => {
             </div>
         </div>
         
-        {filteredRequests.length === 0 ? (
+        {sortedRequests.length === 0 ? (
             <div className="p-10 text-center text-gray-500">
                 <p>{searchTerm ? 'Nenhuma solicitação encontrada para a pesquisa.' : 'Nenhuma solicitação encontrada neste setor.'}</p>
             </div>
@@ -142,17 +203,25 @@ const RequestListPage: React.FC = () => {
                 <table className="min-w-full divide-y divide-zinc-800">
                     <thead className="bg-zinc-800/50">
                         <tr>
-                            {/* Dynamically render headers */}
+                            {/* Dynamically render headers with Sorting */}
                             {visibleColumns.map(field => (
-                                <th key={field.id} scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                    {field.label}
+                                <th 
+                                    key={field.id} 
+                                    scope="col" 
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-zinc-800 select-none transition-colors"
+                                    onClick={() => requestSort(field.id)}
+                                >
+                                    <div className="flex items-center">
+                                        {field.label}
+                                        {getSortIndicator(field.id)}
+                                    </div>
                                 </th>
                             ))}
                             <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Ações</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800">
-                        {filteredRequests.map((request) => (
+                        {sortedRequests.map((request) => (
                             <tr key={request.id} className="hover:bg-zinc-800/50 transition-colors">
                                 {/* Dynamically render cells */}
                                 {visibleColumns.map(field => (

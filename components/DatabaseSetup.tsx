@@ -1,10 +1,11 @@
+
 import React from 'react';
 import Button from './ui/Button';
 
 const DatabaseSetup: React.FC = () => {
   const sqlScript = `-- =================================================================
--- SCRIPT DE CRIAÇÃO E CORREÇÃO DO BANCO DE DADOS (SUPRIMENTOS)
--- Copie e cole este código no SQL Editor do Supabase e clique em RUN.
+-- SCRIPT COMPLETO DE CONFIGURAÇÃO DO BANCO DE DADOS
+-- Copie todo este conteúdo e execute no SQL Editor do Supabase
 -- =================================================================
 
 -- 1. Tabela de Setores
@@ -25,7 +26,6 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 -- 3. Tabela de Solicitações
--- A coluna 'history' é do tipo JSONB para armazenar o array de logs de alteração.
 CREATE TABLE IF NOT EXISTS public.requests (
   id bigint PRIMARY KEY,
   "orderNumber" text NOT NULL,
@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.requests (
   sector text,
   supplier text,
   description text,
+  "purchaseOrderDate" text,
   "deliveryDate" text,
   status text,
   responsible text,
@@ -61,11 +62,11 @@ CREATE TABLE IF NOT EXISTS public.statuses (
   color text
 );
 
--- 6. Tabela de Fornecedores (NOVA)
+-- 6. Tabela de Fornecedores
 CREATE TABLE IF NOT EXISTS public.suppliers (
   id text PRIMARY KEY,
   name text NOT NULL,
-  "contactName" text, -- Nome em CamelCase precisa de aspas
+  "contactName" text,
   email text,
   phone text,
   category text,
@@ -74,43 +75,53 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
 );
 
 -- =================================================================
--- CORREÇÕES DE COLUNAS FALTANTES (Para bancos já criados)
+-- VERIFICAÇÃO E CORREÇÃO DE COLUNAS FALTANTES
 -- =================================================================
 
--- Adiciona a coluna HISTORY se ela não existir
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='history') THEN
         ALTER TABLE public.requests ADD COLUMN "history" JSONB DEFAULT '[]'::JSONB;
     END IF;
-END $$;
-
--- Garante que o histórico antigo não seja NULL (evita erro no React)
-UPDATE public.requests SET history = '[]'::JSONB WHERE history IS NULL;
-
--- Adiciona outras colunas essenciais se faltarem
-DO $$
-BEGIN
-    -- Campos na tabela requests
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='description') THEN
         ALTER TABLE public.requests ADD COLUMN "description" TEXT;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='requester') THEN
         ALTER TABLE public.requests ADD COLUMN "requester" TEXT;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='purchaseOrderDate') THEN
+        ALTER TABLE public.requests ADD COLUMN "purchaseOrderDate" TEXT;
+    END IF;
 
-    -- Campos na tabela form_fields
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='form_fields' AND column_name='isVisibleInList') THEN
         ALTER TABLE public.form_fields ADD COLUMN "isVisibleInList" BOOLEAN DEFAULT TRUE;
     END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='form_fields' AND column_name='orderIndex') THEN
         ALTER TABLE public.form_fields ADD COLUMN "orderIndex" INTEGER DEFAULT 99;
     END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='suppliers' AND column_name='contactName') THEN
+        ALTER TABLE public.suppliers ADD COLUMN "contactName" text;
+    END IF;
 END $$;
 
+UPDATE public.requests SET history = '[]'::JSONB WHERE history IS NULL;
+
 -- =================================================================
--- POLÍTICAS DE SEGURANÇA (RLS) - Permite acesso público para o app funcionar
+-- GARANTIR QUE OS CAMPOS PADRÃO EXISTAM EM form_fields
 -- =================================================================
+
+INSERT INTO public.form_fields (id, label, type, "isActive", required, "isStandard", "isVisibleInList", "orderIndex")
+VALUES ('purchaseOrderDate', 'Data da OC', 'date', true, false, true, false, 7)
+ON CONFLICT (id) DO UPDATE 
+SET label = EXCLUDED.label, 
+    type = EXCLUDED.type, 
+    "isStandard" = true;
+
+-- =================================================================
+-- PERMISSÕES DE ACESSO (RLS)
+-- =================================================================
+
 ALTER TABLE public.sectors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
@@ -162,7 +173,7 @@ CREATE POLICY "Enable all access for all users" ON public.suppliers FOR ALL USIN
         <textarea 
           readOnly 
           value={sqlScript} 
-          className="w-full h-64 bg-zinc-950 text-green-400 font-mono text-xs p-4 rounded-md border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full h-96 bg-zinc-950 text-green-400 font-mono text-xs p-4 rounded-md border border-zinc-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
         <button 
           onClick={copyToClipboard}

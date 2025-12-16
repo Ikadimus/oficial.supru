@@ -23,6 +23,7 @@ export interface Request {
   sector: string;
   supplier: string;
   description?: string;
+  purchaseOrderDate?: string; // Novo campo: Data da OC (Ordem de Compra)
   deliveryDate?: string;
   status: string;
   responsible: string; // Quem dá andamento

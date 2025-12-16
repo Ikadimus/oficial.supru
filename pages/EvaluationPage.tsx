@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Supplier } from '../types';
@@ -96,7 +97,7 @@ const EvaluationPage: React.FC = () => {
     const { requests, suppliers, addSupplier, updateSupplier, deleteSupplier } = useRequests();
     const { hasFullVisibility, users } = useAuth();
     
-    const [activeTab, setActiveTab] = useState<'team' | 'suppliers'>('team');
+    const [activeTab, setActiveTab] = useState<'team' | 'suppliers' | 'efficiency'>('team');
     
     const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
@@ -105,12 +106,28 @@ const EvaluationPage: React.FC = () => {
     // Estado da Pesquisa
     const [searchTerm, setSearchTerm] = useState('');
 
+    // --- CONFIGURAÇÃO DE METAS (THRESHOLDS) ---
+    // Salva no localStorage para persistir entre recargas
+    const [thresholds, setThresholds] = useState<{ excellent: number; good: number }>({ excellent: 5, good: 10 });
+
+    useEffect(() => {
+        const stored = localStorage.getItem('performance_thresholds');
+        if (stored) {
+            setThresholds(JSON.parse(stored));
+        }
+    }, []);
+
+    const saveThresholds = (newThresholds: { excellent: number; good: number }) => {
+        setThresholds(newThresholds);
+        localStorage.setItem('performance_thresholds', JSON.stringify(newThresholds));
+    };
+
     // Se não tiver permissão, redireciona
     if (!hasFullVisibility) {
         return <Navigate to="/" replace />;
     }
 
-    // --- CÁLCULOS DE DESEMPENHO DA EQUIPE ---
+    // --- CÁLCULOS DE DESEMPENHO DA EQUIPE (LEAD TIME TOTAL: Solicitação -> Entrega) ---
     const teamMetrics = useMemo(() => {
         const metrics: Record<string, { total: number; completed: number; totalDays: number; avgLeadTime: number }> = {};
 
@@ -129,7 +146,6 @@ const EvaluationPage: React.FC = () => {
             metrics[responsible].total += 1;
 
             // Calcula Lead Time (Data Entrega/Conclusão - Data Solicitação)
-            // Considera apenas se tiver status que indica fim ou data de entrega preenchida
             if ((req.status === 'Entregue' || req.status === 'Concluído') && req.requestDate && req.deliveryDate) {
                 const start = new Date(req.requestDate);
                 const end = new Date(req.deliveryDate);
@@ -152,6 +168,30 @@ const EvaluationPage: React.FC = () => {
         return Object.entries(metrics)
             .sort(([, a], [, b]) => b.total - a.total); // Ordena por volume de trabalho
     }, [requests, users]);
+
+    // --- CÁLCULOS DE EFICIÊNCIA DE SUPRIMENTOS (TEMPO DE COMPRA: Solicitação -> Data da OC) ---
+    const supplyMetrics = useMemo(() => {
+        // Lista de requisições que possuem Data OC
+        const validRequests = requests.filter(r => r.requestDate && r.purchaseOrderDate);
+        
+        const data = validRequests.map(req => {
+            const start = new Date(req.requestDate);
+            const end = new Date(req.purchaseOrderDate!);
+            const diffTime = end.getTime() - start.getTime(); // Pode ser negativo se inserido errado
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            return {
+                ...req,
+                daysToPO: diffDays >= 0 ? diffDays : 0 // Proteção contra datas invertidas
+            };
+        });
+
+        // Média Geral
+        const totalDays = data.reduce((acc, curr) => acc + curr.daysToPO, 0);
+        const avgDays = data.length > 0 ? (totalDays / data.length).toFixed(1) : '0.0';
+
+        return { list: data, avgDays };
+    }, [requests]);
 
     // --- CÁLCULOS DE FORNECEDORES ---
     const supplierMetrics = useMemo(() => {
@@ -217,14 +257,20 @@ const EvaluationPage: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-white tracking-tight">Avaliação de Desempenho</h1>
-                    <p className="text-gray-400 mt-1">Análise de métricas da equipe e gestão de fornecedores.</p>
+                    <p className="text-gray-400 mt-1">Análise de métricas da equipe, eficiência de compras e gestão de fornecedores.</p>
                 </div>
-                <div className="bg-zinc-800 p-1 rounded-lg inline-flex">
+                <div className="bg-zinc-800 p-1 rounded-lg inline-flex flex-wrap">
                     <button 
                         onClick={() => setActiveTab('team')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'team' ? 'bg-zinc-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
                     >
                         Desempenho da Equipe
+                    </button>
+                     <button 
+                        onClick={() => setActiveTab('efficiency')}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'efficiency' ? 'bg-zinc-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                    >
+                        Eficiência de Suprimentos
                     </button>
                     <button 
                         onClick={() => setActiveTab('suppliers')}
@@ -238,6 +284,39 @@ const EvaluationPage: React.FC = () => {
             {/* CONTEÚDO DA ABA: EQUIPE */}
             {activeTab === 'team' && (
                 <div className="grid grid-cols-1 gap-6">
+                    {/* Configuração de Metas */}
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                        <div className="mb-4">
+                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Configurar Metas de Atendimento (Lead Time)</h3>
+                             <p className="text-xs text-gray-500">Defina os limites de dias para classificar o desempenho da equipe.</p>
+                        </div>
+                        <div className="flex flex-col md:flex-row gap-6 items-center">
+                             <div className="w-full md:w-1/3">
+                                 <label className="text-xs text-green-400 font-bold block mb-1">Excelente (até X dias)</label>
+                                 <input 
+                                    type="number" 
+                                    value={thresholds.excellent} 
+                                    onChange={(e) => saveThresholds({ ...thresholds, excellent: Number(e.target.value) })}
+                                    className="w-full bg-zinc-800 border border-green-900/50 text-green-100 rounded p-2 text-sm"
+                                 />
+                             </div>
+                             <div className="w-full md:w-1/3">
+                                 <label className="text-xs text-yellow-400 font-bold block mb-1">Bom (até X dias)</label>
+                                 <input 
+                                    type="number" 
+                                    value={thresholds.good} 
+                                    onChange={(e) => saveThresholds({ ...thresholds, good: Number(e.target.value) })}
+                                    className="w-full bg-zinc-800 border border-yellow-900/50 text-yellow-100 rounded p-2 text-sm"
+                                 />
+                             </div>
+                             <div className="w-full md:w-1/3 pt-4">
+                                 <p className="text-xs text-gray-400">
+                                     Acima de <span className="text-red-400 font-bold">{thresholds.good} dias</span> será considerado <span className="text-red-400 font-bold">Atenção</span>.
+                                 </p>
+                             </div>
+                        </div>
+                    </div>
+
                     {/* Resumo Rápido */}
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
                         <h2 className="text-lg font-bold text-white mb-4">Eficiência Operacional</h2>
@@ -254,12 +333,23 @@ const EvaluationPage: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y divide-zinc-800">
                                     {teamMetrics.map(([name, metrics]) => {
-                                        // Cálculo simples de "score" visual
+                                        // Cálculo de "score" visual baseado nas metas configuradas
                                         let scoreColor = 'text-gray-400';
+                                        let scoreText = 'Indefinido';
+                                        
                                         if (metrics.completed > 0) {
-                                            if (metrics.avgLeadTime <= 5) scoreColor = 'text-green-400';
-                                            else if (metrics.avgLeadTime <= 10) scoreColor = 'text-yellow-400';
-                                            else scoreColor = 'text-red-400';
+                                            if (metrics.avgLeadTime <= thresholds.excellent) {
+                                                scoreColor = 'text-green-400';
+                                                scoreText = 'Excelente';
+                                            }
+                                            else if (metrics.avgLeadTime <= thresholds.good) {
+                                                scoreColor = 'text-yellow-400';
+                                                scoreText = 'Bom';
+                                            }
+                                            else {
+                                                scoreColor = 'text-red-400';
+                                                scoreText = 'Atenção';
+                                            }
                                         }
 
                                         return (
@@ -280,7 +370,7 @@ const EvaluationPage: React.FC = () => {
                                                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                                                     {metrics.completed > 0 ? (
                                                         <span className={`font-bold ${scoreColor}`}>
-                                                            {metrics.avgLeadTime <= 5 ? 'Excelente' : metrics.avgLeadTime <= 10 ? 'Bom' : 'Atenção'}
+                                                            {scoreText}
                                                         </span>
                                                     ) : (
                                                         <span className="text-gray-500">Sem dados suficientes</span>
@@ -293,6 +383,78 @@ const EvaluationPage: React.FC = () => {
                             </table>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* CONTEÚDO DA ABA: EFICIÊNCIA DE SUPRIMENTOS */}
+            {activeTab === 'efficiency' && (
+                <div className="space-y-6">
+                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-bold text-white">Tempo Médio de Conversão (Solicitação ➝ OC)</h2>
+                                <p className="text-sm text-gray-400">Média de dias entre a criação da solicitação e a emissão da Ordem de Compra.</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-4xl font-bold text-blue-500">{supplyMetrics.avgDays}</span>
+                                <span className="text-sm text-gray-400 block">dias úteis (aprox.)</span>
+                            </div>
+                         </div>
+                     </div>
+
+                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-lg">
+                        <div className="p-4 border-b border-zinc-800">
+                             <h3 className="text-sm font-bold text-white uppercase">Detalhamento por Solicitação</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-zinc-800">
+                                <thead className="bg-zinc-800/50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Pedido</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Data Solicitação</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Data OC</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">Tempo Decorrido</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Fornecedor</th>
+                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Ver</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-800">
+                                    {supplyMetrics.list.length > 0 ? supplyMetrics.list.map(req => (
+                                        <tr key={req.id} className="hover:bg-zinc-800/50">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-white">
+                                                {req.orderNumber}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {formatDate(req.requestDate)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-300">
+                                                {formatDate(req.purchaseOrderDate || '')}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.daysToPO <= 2 ? 'bg-green-100 text-green-800' : req.daysToPO <= 5 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                                    {req.daysToPO} dias
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {req.supplier}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                                                 <Link to={`/requests/${req.id}`} className="text-blue-400 hover:text-blue-300">
+                                                    ➔
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    )) : (
+                                        <tr>
+                                            <td colSpan={6} className="text-center py-8 text-gray-500">
+                                                Nenhuma solicitação com "Data da OC" preenchida encontrada.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                     </div>
                 </div>
             )}
 

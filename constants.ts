@@ -31,10 +31,11 @@ export const initialFormFields: FormField[] = [
     { id: 'sector', label: 'Setor', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: false, orderIndex: 4 },
     { id: 'description', label: 'Descrição', type: 'text', isActive: true, required: false, isStandard: true, isVisibleInList: true, orderIndex: 5 },
     { id: 'supplier', label: 'Fornecedor', type: 'text', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 6 },
-    { id: 'deliveryDate', label: 'Previsão de Entrega', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 7 },
-    { id: 'status', label: 'Status', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 8 },
-    { id: 'responsible', label: 'Responsável (Atendimento)', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 9 },
-    { id: 'notes', label: 'Observações', type: 'textarea', isActive: false, required: false, isStandard: false, isVisibleInList: false, orderIndex: 10 },
+    { id: 'purchaseOrderDate', label: 'Data da OC', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 7 },
+    { id: 'deliveryDate', label: 'Previsão de Entrega', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 8 },
+    { id: 'status', label: 'Status', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 9 },
+    { id: 'responsible', label: 'Responsável (Atendimento)', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 10 },
+    { id: 'notes', label: 'Observações', type: 'textarea', isActive: false, required: false, isStandard: false, isVisibleInList: false, orderIndex: 11 },
 ];
 
 export const initialRequests: Request[] = [
@@ -47,6 +48,7 @@ export const initialRequests: Request[] = [
     supplier: 'Fornecedor A',
     description: 'Compra de periféricos urgentes',
     deliveryDate: '2023-10-10',
+    purchaseOrderDate: '2023-10-03',
     status: 'Entregue',
     responsible: 'Administrador',
     items: [
