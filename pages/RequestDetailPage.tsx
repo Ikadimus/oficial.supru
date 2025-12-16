@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
@@ -80,6 +81,16 @@ const RequestDetailPage: React.FC = () => {
       if (field.id === 'status') {
           return <StatusBadge statusName={String(value)} />;
       }
+
+      if (field.id === 'urgency') {
+          const urgencyColor = value === 'Alta' ? 'text-red-400 font-bold uppercase' : value === 'Baixa' ? 'text-green-400' : 'text-gray-100';
+          return (
+              <span className={urgencyColor}>
+                  {value === 'Alta' && <span className="mr-1">⚠️</span>}
+                  {String(value)}
+              </span>
+          )
+      }
       
       if (field.type === 'date' || field.id === 'requestDate' || field.id === 'deliveryDate') {
           return formatDate(String(value));
@@ -93,9 +104,14 @@ const RequestDetailPage: React.FC = () => {
         <div className="bg-zinc-900 shadow-xl rounded-lg overflow-hidden border border-zinc-800">
             <div className="p-6 border-b border-zinc-800">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                <h1 className="text-2xl font-bold text-white">
-                    Detalhes da Solicitação: {request.orderNumber}
-                </h1>
+                <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-white">
+                        Detalhes da Solicitação: {request.orderNumber}
+                    </h1>
+                    {request.urgency === 'Alta' && (
+                        <span className="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold animate-pulse">URGENTE</span>
+                    )}
+                </div>
                 <div className="flex items-center space-x-2">
                     <Button as="link" to="/requests" variant="secondary">
                     Voltar

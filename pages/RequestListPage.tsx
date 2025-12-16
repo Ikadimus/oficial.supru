@@ -68,6 +68,7 @@ const RequestListPage: React.FC = () => {
           request.responsible,
           request.sector,
           request.status,
+          request.urgency, // Incluído na busca
           request.requestDate,
           request.deliveryDate,
           request.purchaseOrderDate
@@ -157,17 +158,19 @@ const RequestListPage: React.FC = () => {
   // Get columns that should be visible in the list
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
 
-  const getCellValue = (request: any, fieldId: string, isStandard: boolean, fieldType?: string) => {
+  const getCellValue = (request: any, fieldId: string, isStandard: boolean, fieldType: string, isUrgent: boolean) => {
       const value = isStandard ? request[fieldId] : request.customFields?.[fieldId];
       if (value === undefined || value === null) return '-';
       
+      const textColorClass = isUrgent ? "text-red-400 font-bold" : "text-gray-300";
+
       if (fieldId === 'status') {
           return <StatusBadge statusName={value} />;
       }
       if (fieldType === 'date' || fieldId === 'requestDate' || fieldId === 'deliveryDate' || fieldId === 'purchaseOrderDate') {
-          return <span className="text-gray-300">{formatDate(value)}</span>;
+          return <span className={textColorClass}>{formatDate(value)}</span>;
       }
-      return <span className="text-gray-300">{value}</span>;
+      return <span className={textColorClass}>{value}</span>;
   };
 
   return (
@@ -221,26 +224,38 @@ const RequestListPage: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800">
-                        {sortedRequests.map((request) => (
-                            <tr key={request.id} className="hover:bg-zinc-800/50 transition-colors">
-                                {/* Dynamically render cells */}
-                                {visibleColumns.map(field => (
-                                    <td key={`${request.id}-${field.id}`} className="px-6 py-4 whitespace-nowrap text-sm">
-                                        {field.id === 'orderNumber' ? (
-                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard, field.type)}</span>
-                                        ) : (
-                                            getCellValue(request, field.id, field.isStandard, field.type)
-                                        )}
+                        {sortedRequests.map((request) => {
+                            const isUrgent = request.urgency === 'Alta';
+                            const rowClass = isUrgent ? "bg-red-900/10 hover:bg-red-900/20" : "hover:bg-zinc-800/50";
+
+                            return (
+                                <tr key={request.id} className={`${rowClass} transition-colors`}>
+                                    {/* Dynamically render cells */}
+                                    {visibleColumns.map(field => (
+                                        <td key={`${request.id}-${field.id}`} className="px-6 py-4 whitespace-nowrap text-sm">
+                                            {field.id === 'orderNumber' ? (
+                                                <div className="flex items-center">
+                                                    {isUrgent && (
+                                                        <span className="text-red-500 font-bold text-lg mr-2" title="Urgência Alta">!</span>
+                                                    )}
+                                                    <span className={`font-medium ${isUrgent ? 'text-red-400' : 'text-white'}`}>
+                                                        {getCellValue(request, field.id, field.isStandard, field.type, isUrgent)}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                getCellValue(request, field.id, field.isStandard, field.type, isUrgent)
+                                            )}
+                                        </td>
+                                    ))}
+                                    
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <Link to={`/requests/${request.id}`} className="text-blue-400 hover:text-blue-300">
+                                            Ver Detalhes
+                                        </Link>
                                     </td>
-                                ))}
-                                
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <Link to={`/requests/${request.id}`} className="text-blue-400 hover:text-blue-300">
-                                        Ver Detalhes
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>

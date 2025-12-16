@@ -70,35 +70,60 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
                 orderIndex: f.orderIndex !== undefined && f.orderIndex !== null ? f.orderIndex : 99 
             }));
             
-            // Auto-fixes omitted for brevity but preserved logic
+            // --- CORREÇÃO AUTOMÁTICA DE CAMPO DESCRIÇÃO ---
             const hasDescription = sanitizedFields.some((f: any) => f.id === 'description');
             if (!hasDescription) {
                 const descField = initialFormFields.find(f => f.id === 'description');
                 if (descField) {
                     sanitizedFields.push(descField);
-                    supabase.from('form_fields').insert(descField).then(({ error }) => { if(error) console.warn(error) });
+                    supabase.from('form_fields').insert(descField).then(({ error }) => {
+                        if (error) console.warn("Falha ao auto-inserir description:", error.message);
+                    });
                 }
             }
+
+            // --- CORREÇÃO AUTOMÁTICA DE CAMPO SOLICITANTE ---
             const hasRequester = sanitizedFields.some((f: any) => f.id === 'requester');
             if (!hasRequester) {
                 const reqField = initialFormFields.find(f => f.id === 'requester');
                 if (reqField) {
                     sanitizedFields.push(reqField);
-                    supabase.from('form_fields').insert(reqField).then(({ error }) => { if(error) console.warn(error) });
+                    supabase.from('form_fields').insert(reqField).then(({ error }) => {
+                         if (error) console.warn("Falha ao auto-inserir requester:", error.message);
+                    });
                 }
             }
+
+            // --- CORREÇÃO AUTOMÁTICA DE CAMPO DATA DA OC ---
             const hasPO = sanitizedFields.some((f: any) => f.id === 'purchaseOrderDate');
             if (!hasPO) {
                 const poField = initialFormFields.find(f => f.id === 'purchaseOrderDate');
                 if (poField) {
                     sanitizedFields.push(poField);
-                    supabase.from('form_fields').insert(poField).then(({ error }) => { if(error) console.warn(error) });
+                    supabase.from('form_fields').insert(poField).then(({ error }) => {
+                         if (error) console.warn("Falha ao auto-inserir purchaseOrderDate:", error.message);
+                    });
+                }
+            }
+
+            // --- CORREÇÃO AUTOMÁTICA DE CAMPO URGÊNCIA ---
+            const hasUrgency = sanitizedFields.some((f: any) => f.id === 'urgency');
+            if (!hasUrgency) {
+                const urgencyField = initialFormFields.find(f => f.id === 'urgency');
+                if (urgencyField) {
+                    sanitizedFields.push(urgencyField);
+                    supabase.from('form_fields').insert(urgencyField).then(({ error }) => {
+                         if (error) console.warn("Falha ao auto-inserir urgency:", error.message);
+                    });
                 }
             }
             
+            // Ordena os campos
             sanitizedFields.sort((a: any, b: any) => (a.orderIndex || 99) - (b.orderIndex || 99));
+
             setFormFields(sanitizedFields);
         } else if (!fieldsError) {
+            // Auto-seed se vazio e sem erro de tabela
             console.log("Configurando campos iniciais no banco...");
             for(const f of initialFormFields) {
                 await supabase.from('form_fields').insert(f);
@@ -180,21 +205,50 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
     const newRequest = { ...request, id: Date.now() }; 
     setRequests(prev => [newRequest as Request, ...prev]);
     const { error } = await supabase.from('requests').insert(newRequest);
-    if (error) alert(`Erro ao criar: ${error.message}`);
+    if (error) {
+        console.error("Erro ao criar solicitação:", JSON.stringify(error, null, 2));
+        if (error.code === '42703') {
+             alert(`ERRO DE BANCO: Coluna inexistente. Execute o script SQL em Configurações.`);
+        } else {
+             alert(`Erro ao criar: ${error.message || JSON.stringify(error)}`);
+        }
+    }
   };
 
   const updateRequest = async (id: number, updatedRequest: Partial<Request>) => {
     setRequests(prev => prev.map(r => r.id === id ? { ...r, ...updatedRequest } : r));
-    const dbPayload: any = { ...updatedRequest };
-    if (dbPayload.id) delete dbPayload.id; 
     
-    // Remove chaves undefined e normaliza history
+    // Limpeza de payload para evitar erros de banco
+    const dbPayload: any = { 
+        orderNumber: updatedRequest.orderNumber,
+        requestDate: updatedRequest.requestDate,
+        requester: updatedRequest.requester,
+        sector: updatedRequest.sector,
+        supplier: updatedRequest.supplier,
+        description: updatedRequest.description,
+        urgency: updatedRequest.urgency, // Novo campo
+        purchaseOrderDate: updatedRequest.purchaseOrderDate, 
+        deliveryDate: updatedRequest.deliveryDate,
+        status: updatedRequest.status,
+        responsible: updatedRequest.responsible,
+        items: updatedRequest.items,
+        customFields: updatedRequest.customFields,
+        history: updatedRequest.history
+    };
+    
+    // Remove chaves undefined
     const cleanPayload: any = {};
     Object.keys(dbPayload).forEach(key => {
         if (dbPayload[key] !== undefined) cleanPayload[key] = dbPayload[key];
     });
 
-    await supabase.from('requests').update(cleanPayload).eq('id', id);
+    const { error } = await supabase.from('requests').update(cleanPayload).eq('id', id);
+    if (error) {
+        console.error("Erro ao atualizar solicitação:", JSON.stringify(error, null, 2));
+        if (error.code === '42703') {
+             alert(`ERRO DE BANCO: Coluna inexistente (possivelmente 'urgency'). Execute o script SQL em Configurações.`);
+        }
+    }
   };
 
   const deleteRequest = async (id: number) => {

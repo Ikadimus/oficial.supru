@@ -18,6 +18,7 @@ const RequestNewPage: React.FC = () => {
     requester: user?.name || '', // Solicitante = Quem está logado
     supplier: '',
     description: '',
+    urgency: 'Normal', // Valor padrão
     deliveryDate: '',
     purchaseOrderDate: '', // Inicializa vazio
     status: statuses[0]?.name || '',
@@ -87,6 +88,8 @@ const RequestNewPage: React.FC = () => {
                 if (field.id === 'sector') options = sectors.map(s => s.name);
                 // Tanto Solicitante quanto Responsável puxam a lista de Usuários
                 if (field.id === 'responsible' || field.id === 'requester') options = users.map(u => u.name);
+                // Campo de Urgência
+                if (field.id === 'urgency') options = ['Alta', 'Normal', 'Baixa'];
                 
                 return (
                      <div key={field.id}>
@@ -97,7 +100,7 @@ const RequestNewPage: React.FC = () => {
                           value={value}
                           onChange={handleInputChange}
                           required={field.required}
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-600 bg-gray-800 text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                          className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-600 bg-gray-800 text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md ${field.id === 'urgency' && value === 'Alta' ? 'text-red-400 border-red-500' : ''}`}
                         >
                             <option value="">Selecione...</option>
                             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}

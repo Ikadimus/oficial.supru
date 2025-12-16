@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.requests (
   sector text,
   supplier text,
   description text,
+  urgency text DEFAULT 'Normal',
   "purchaseOrderDate" text,
   "deliveryDate" text,
   status text,
@@ -99,6 +100,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='purchaseOrderDate') THEN
         ALTER TABLE public.requests ADD COLUMN "purchaseOrderDate" TEXT;
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='requests' AND column_name='urgency') THEN
+        ALTER TABLE public.requests ADD COLUMN "urgency" TEXT DEFAULT 'Normal';
+    END IF;
 
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='form_fields' AND column_name='isVisibleInList') THEN
         ALTER TABLE public.form_fields ADD COLUMN "isVisibleInList" BOOLEAN DEFAULT TRUE;
@@ -119,7 +123,7 @@ UPDATE public.requests SET history = '[]'::JSONB WHERE history IS NULL;
 -- =================================================================
 
 INSERT INTO public.form_fields (id, label, type, "isActive", required, "isStandard", "isVisibleInList", "orderIndex")
-VALUES ('purchaseOrderDate', 'Data da OC', 'date', true, false, true, false, 7)
+VALUES ('urgency', 'Urgência', 'select', true, true, true, true, 2)
 ON CONFLICT (id) DO UPDATE 
 SET label = EXCLUDED.label, 
     type = EXCLUDED.type, 
