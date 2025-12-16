@@ -74,6 +74,13 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
   notes text
 );
 
+-- 7. Tabela de Configurações Globais (Metas)
+CREATE TABLE IF NOT EXISTS public.app_config (
+  id bigint PRIMARY KEY,
+  sla_excellent integer DEFAULT 5,
+  sla_good integer DEFAULT 10
+);
+
 -- =================================================================
 -- VERIFICAÇÃO E CORREÇÃO DE COLUNAS FALTANTES
 -- =================================================================
@@ -118,6 +125,11 @@ SET label = EXCLUDED.label,
     type = EXCLUDED.type, 
     "isStandard" = true;
 
+-- Seed da configuração inicial se não existir
+INSERT INTO public.app_config (id, sla_excellent, sla_good)
+VALUES (1, 5, 10)
+ON CONFLICT (id) DO NOTHING;
+
 -- =================================================================
 -- PERMISSÕES DE ACESSO (RLS)
 -- =================================================================
@@ -128,6 +140,7 @@ ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.form_fields ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.statuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_config ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.sectors;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.users;
@@ -135,6 +148,7 @@ DROP POLICY IF EXISTS "Enable all access for all users" ON public.requests;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.form_fields;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.statuses;
 DROP POLICY IF EXISTS "Enable all access for all users" ON public.suppliers;
+DROP POLICY IF EXISTS "Enable all access for all users" ON public.app_config;
 
 CREATE POLICY "Enable all access for all users" ON public.sectors FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.users FOR ALL USING (true) WITH CHECK (true);
@@ -142,6 +156,7 @@ CREATE POLICY "Enable all access for all users" ON public.requests FOR ALL USING
 CREATE POLICY "Enable all access for all users" ON public.form_fields FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.statuses FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Enable all access for all users" ON public.suppliers FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Enable all access for all users" ON public.app_config FOR ALL USING (true) WITH CHECK (true);
 `;
 
   const copyToClipboard = () => {

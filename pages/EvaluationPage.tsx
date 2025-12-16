@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Supplier } from '../types';
@@ -94,7 +94,7 @@ const SupplierFormModal: React.FC<{
 };
 
 const EvaluationPage: React.FC = () => {
-    const { requests, suppliers, addSupplier, updateSupplier, deleteSupplier } = useRequests();
+    const { requests, suppliers, addSupplier, updateSupplier, deleteSupplier, appConfig } = useRequests();
     const { hasFullVisibility, users } = useAuth();
     
     const [activeTab, setActiveTab] = useState<'team' | 'suppliers' | 'efficiency'>('team');
@@ -106,20 +106,10 @@ const EvaluationPage: React.FC = () => {
     // Estado da Pesquisa
     const [searchTerm, setSearchTerm] = useState('');
 
-    // --- CONFIGURAÇÃO DE METAS (THRESHOLDS) ---
-    // Salva no localStorage para persistir entre recargas
-    const [thresholds, setThresholds] = useState<{ excellent: number; good: number }>({ excellent: 5, good: 10 });
-
-    useEffect(() => {
-        const stored = localStorage.getItem('performance_thresholds');
-        if (stored) {
-            setThresholds(JSON.parse(stored));
-        }
-    }, []);
-
-    const saveThresholds = (newThresholds: { excellent: number; good: number }) => {
-        setThresholds(newThresholds);
-        localStorage.setItem('performance_thresholds', JSON.stringify(newThresholds));
+    // Metas de Referência vindas do AppConfig
+    const thresholds = { 
+        excellent: appConfig?.sla_excellent || 5, 
+        good: appConfig?.sla_good || 10 
     };
 
     // Se não tiver permissão, redireciona
@@ -262,19 +252,19 @@ const EvaluationPage: React.FC = () => {
                 <div className="bg-zinc-800 p-1 rounded-lg inline-flex flex-wrap">
                     <button 
                         onClick={() => setActiveTab('team')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'team' ? 'bg-zinc-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'team' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-zinc-700'}`}
                     >
                         Desempenho da Equipe
                     </button>
                      <button 
                         onClick={() => setActiveTab('efficiency')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'efficiency' ? 'bg-zinc-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'efficiency' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-zinc-700'}`}
                     >
                         Eficiência de Suprimentos
                     </button>
                     <button 
                         onClick={() => setActiveTab('suppliers')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'suppliers' ? 'bg-zinc-600 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+                        className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${activeTab === 'suppliers' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:text-white hover:bg-zinc-700'}`}
                     >
                         Gestão de Fornecedores
                     </button>
@@ -284,39 +274,6 @@ const EvaluationPage: React.FC = () => {
             {/* CONTEÚDO DA ABA: EQUIPE */}
             {activeTab === 'team' && (
                 <div className="grid grid-cols-1 gap-6">
-                    {/* Configuração de Metas */}
-                    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                        <div className="mb-4">
-                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider">Configurar Metas de Atendimento (Lead Time)</h3>
-                             <p className="text-xs text-gray-500">Defina os limites de dias para classificar o desempenho da equipe.</p>
-                        </div>
-                        <div className="flex flex-col md:flex-row gap-6 items-center">
-                             <div className="w-full md:w-1/3">
-                                 <label className="text-xs text-green-400 font-bold block mb-1">Excelente (até X dias)</label>
-                                 <input 
-                                    type="number" 
-                                    value={thresholds.excellent} 
-                                    onChange={(e) => saveThresholds({ ...thresholds, excellent: Number(e.target.value) })}
-                                    className="w-full bg-zinc-800 border border-green-900/50 text-green-100 rounded p-2 text-sm"
-                                 />
-                             </div>
-                             <div className="w-full md:w-1/3">
-                                 <label className="text-xs text-yellow-400 font-bold block mb-1">Bom (até X dias)</label>
-                                 <input 
-                                    type="number" 
-                                    value={thresholds.good} 
-                                    onChange={(e) => saveThresholds({ ...thresholds, good: Number(e.target.value) })}
-                                    className="w-full bg-zinc-800 border border-yellow-900/50 text-yellow-100 rounded p-2 text-sm"
-                                 />
-                             </div>
-                             <div className="w-full md:w-1/3 pt-4">
-                                 <p className="text-xs text-gray-400">
-                                     Acima de <span className="text-red-400 font-bold">{thresholds.good} dias</span> será considerado <span className="text-red-400 font-bold">Atenção</span>.
-                                 </p>
-                             </div>
-                        </div>
-                    </div>
-
                     {/* Resumo Rápido */}
                     <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
                         <h2 className="text-lg font-bold text-white mb-4">Eficiência Operacional</h2>
@@ -333,7 +290,7 @@ const EvaluationPage: React.FC = () => {
                                 </thead>
                                 <tbody className="divide-y divide-zinc-800">
                                     {teamMetrics.map(([name, metrics]) => {
-                                        // Cálculo de "score" visual baseado nas metas configuradas
+                                        // Cálculo de "score" visual baseado nas metas globais
                                         let scoreColor = 'text-gray-400';
                                         let scoreText = 'Indefinido';
                                         

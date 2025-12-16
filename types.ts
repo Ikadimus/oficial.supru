@@ -49,6 +49,12 @@ export interface Status {
   color: 'yellow' | 'blue' | 'purple' | 'green' | 'red' | 'gray';
 }
 
+export interface AppConfig {
+  id: number; // Singleton: sempre 1
+  sla_excellent: number;
+  sla_good: number;
+}
+
 export interface User {
   id: number;
   name: string;
