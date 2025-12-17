@@ -83,13 +83,12 @@ const RequestDetailPage: React.FC = () => {
       }
 
       if (field.id === 'urgency') {
-          const urgencyColor = value === 'Alta' ? 'text-red-400 font-bold uppercase' : value === 'Baixa' ? 'text-green-400' : 'text-gray-100';
-          return (
-              <span className={urgencyColor}>
-                  {value === 'Alta' && <span className="mr-1">⚠️</span>}
-                  {String(value)}
-              </span>
-          )
+          const val = String(value);
+          let colorClass = 'text-gray-100';
+          if (val === 'Alta') colorClass = 'text-red-500 font-bold';
+          else if (val === 'Normal') colorClass = 'text-yellow-500 font-bold';
+          else if (val === 'Baixa') colorClass = 'text-green-500 font-bold';
+          return <span className={colorClass}>{val}</span>;
       }
       
       if (field.type === 'date' || field.id === 'requestDate' || field.id === 'deliveryDate') {
@@ -106,7 +105,7 @@ const RequestDetailPage: React.FC = () => {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <h1 className="text-2xl font-bold text-white">
-                        Detalhes da Solicitação: {request.orderNumber}
+                        Detalhes: {request.orderNumber}
                     </h1>
                     {request.urgency === 'Alta' && (
                         <span className="bg-red-600 text-white text-xs px-2 py-1 rounded font-bold animate-pulse">URGENTE</span>
@@ -119,10 +118,10 @@ const RequestDetailPage: React.FC = () => {
                     {isPrivilegedUser && (
                     <>
                         <Button as="link" to={`/requests/edit/${request.id}`} variant="primary">
-                        📝 Editar Solicitação
+                        📝 Editar
                         </Button>
                         <Button variant="danger" onClick={() => setIsModalOpen(true)}>
-                        🗑️ Deletar Solicitação
+                        🗑️ Deletar
                         </Button>
                     </>
                     )}

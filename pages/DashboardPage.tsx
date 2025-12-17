@@ -112,9 +112,6 @@ const DashboardPage: React.FC = () => {
       filteredRequests.forEach(req => {
           if (counts[req.status] !== undefined) {
               counts[req.status]++;
-          } else {
-              // Se tiver um status que não existe mais na config, podemos ignorar ou agrupar
-              // counts['Outros'] = (counts['Outros'] || 0) + 1;
           }
       });
       return counts;
@@ -129,7 +126,7 @@ const DashboardPage: React.FC = () => {
           const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
           const monthName = d.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
           const yearShort = d.getFullYear().toString().slice(2);
-          const key = `${monthName}/${yearShort}`; // ex: out/23
+          const key = `${monthName}/${yearShort}`;
           
           const monthRequests = filteredRequests.filter(req => {
              if (!req.requestDate) return false;
@@ -187,7 +184,6 @@ const DashboardPage: React.FC = () => {
   }
   
   const total = filteredRequests.length;
-  
   const recentRequests = filteredRequests.slice(0, 5);
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
 
@@ -199,15 +195,41 @@ const DashboardPage: React.FC = () => {
           return <StatusBadge statusName={String(value)} />;
       }
 
-      // Verificação específica para entrega
+      if (fieldId === 'urgency') {
+          const val = String(value);
+          let colorClass = 'text-gray-300';
+          if (val === 'Alta') colorClass = 'text-red-500 font-bold';
+          else if (val === 'Normal') colorClass = 'text-yellow-500 font-bold';
+          else if (val === 'Baixa') colorClass = 'text-green-500 font-bold';
+          return <span className={colorClass}>{val}</span>;
+      }
+
       if (fieldId === 'deliveryDate') {
-           const todayDate = new Date().toISOString().split('T')[0];
-           const isOverdue = value && value < todayDate && request.status !== 'Entregue';
+           if (request.status === 'Entregue') return <span className="text-gray-300">{formatDate(value)}</span>;
+           
+           const today = new Date();
+           today.setHours(0, 0, 0, 0);
+           const target = new Date(value);
+           target.setHours(0, 0, 0, 0);
+           
+           const diffTime = target.getTime() - today.getTime();
+           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+           
+           let dateColorClass = 'text-gray-300';
+           let icon = null;
+
+           if (diffDays < 0) {
+               dateColorClass = 'text-red-500 font-bold';
+               icon = <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>;
+           } else if (diffDays <= 5) {
+               dateColorClass = 'text-yellow-500 font-bold';
+           } else if (diffDays > 5) {
+               dateColorClass = 'text-green-500 font-bold';
+           }
+
            return (
-               <span className={isOverdue ? 'text-red-400 font-bold flex items-center gap-1' : 'text-gray-300'}>
-                   {isOverdue && (
-                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                   )}
+               <span className={`${dateColorClass} flex items-center gap-1`}>
+                   {icon}
                    {formatDate(value)}
                </span>
            );
@@ -221,7 +243,10 @@ const DashboardPage: React.FC = () => {
            )
       }
 
-      // Se for campo de data (padrão ou custom)
+      if (fieldId === 'orderNumber') {
+          return <span className="font-bold text-white">{value}</span>;
+      }
+
       if (fieldType === 'date' || fieldId === 'requestDate') {
            return <span className="text-gray-300">{formatDate(value)}</span>;
       }
@@ -247,17 +272,14 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Stat Cards Dinâmicos */}
+      {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Card Total (Sempre Fixo) */}
         <StatCard 
             title="Total Geral" 
             value={total} 
             colorName="blue"
             icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>} 
         />
-
-        {/* Cards de Status Dinâmicos */}
         {statuses.map((status) => (
             <StatCard 
                 key={status.id}
@@ -269,10 +291,8 @@ const DashboardPage: React.FC = () => {
         ))}
       </div>
 
-      {/* --- GRÁFICOS --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Gráfico Mensal (Bar Chart) - Ocupa 2/3 */}
+          {/* Gráfico Mensal */}
           <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg">
               <div className="flex justify-between items-center mb-8">
                 <h3 className="text-lg font-bold text-white flex items-center">
@@ -282,7 +302,6 @@ const DashboardPage: React.FC = () => {
               </div>
               
               <div className="relative h-64 w-full pl-8 pb-6 select-none">
-                  {/* Grid Lines & Y-Axis Labels */}
                   <div className="absolute inset-0 flex flex-col justify-between text-xs text-gray-500 font-mono">
                       {yAxisSteps.map((step, i) => (
                           <div key={i} className="relative flex items-center w-full h-0">
@@ -292,16 +311,11 @@ const DashboardPage: React.FC = () => {
                       ))}
                   </div>
 
-                  {/* Bars Container */}
                   <div className="absolute inset-x-0 bottom-0 top-0 flex items-end justify-around px-2 z-10 pt-2">
                       {monthlyStats.map((stat, index) => {
                           const heightPercentage = Math.round((stat.count / yAxisMax) * 100);
-                          
-                          // Lógica para empilhar: Urgente em cima, Normal embaixo (ou vice versa, visualmente).
-                          // Aqui usamos flex-col para renderizar.
                           const urgentPercentage = stat.count > 0 ? (stat.urgentCount / stat.count) * 100 : 0;
                           const normalPercentage = 100 - urgentPercentage;
-
                           const isHovered = hoveredMonth === index;
                           
                           return (
@@ -311,31 +325,25 @@ const DashboardPage: React.FC = () => {
                                 onMouseEnter={() => setHoveredMonth(index)}
                                 onMouseLeave={() => setHoveredMonth(null)}
                               >
-                                  {/* Tooltip */}
                                   <div className={`absolute -top-12 transition-all duration-200 pointer-events-none z-20 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                       <div className="bg-zinc-800 text-white text-xs py-1 px-3 rounded shadow-xl border border-zinc-700 whitespace-nowrap">
                                           <p className="font-bold">{stat.count} Total <span className="text-red-400">({stat.urgentCount} Urgentes)</span></p>
                                           <p className="text-zinc-400 text-[10px]">{stat.fullDate}</p>
                                       </div>
-                                      {/* Arrow */}
                                       <div className="w-2 h-2 bg-zinc-800 border-r border-b border-zinc-700 transform rotate-45 mx-auto -mt-1"></div>
                                   </div>
 
-                                  {/* Bar Container - Define a altura total baseado no volume */}
                                   <div className="relative w-full max-w-[24px] sm:max-w-[40px] flex flex-col justify-end h-full">
                                       <div 
                                           style={{ height: `${heightPercentage}%` }} 
                                           className={`w-full rounded-t-sm transition-all duration-500 ease-out flex flex-col justify-end overflow-hidden ${stat.count === 0 ? 'bg-zinc-800 h-1' : ''}`}
                                       >
-                                          {/* Parte Urgente (Topo / Vermelho) */}
                                           {stat.count > 0 && stat.urgentCount > 0 && (
                                               <div 
                                                 style={{ height: `${urgentPercentage}%` }} 
                                                 className={`w-full bg-red-600 transition-all duration-300 ${isHovered ? 'brightness-110' : ''}`}
                                               ></div>
                                           )}
-                                          
-                                          {/* Parte Normal (Base / Azul) */}
                                           {stat.count > 0 && (
                                               <div 
                                                 style={{ height: `${normalPercentage}%` }} 
@@ -344,8 +352,6 @@ const DashboardPage: React.FC = () => {
                                           )}
                                       </div>
                                   </div>
-                                  
-                                  {/* X-Axis Label */}
                                   <span className={`text-xs mt-3 font-medium transition-colors ${isHovered ? 'text-white' : 'text-gray-500'}`}>
                                       {stat.name.split('/')[0]}
                                   </span>
@@ -356,7 +362,7 @@ const DashboardPage: React.FC = () => {
               </div>
           </div>
 
-          {/* Gráfico por Setor (Horizontal List) - Ocupa 1/3 */}
+          {/* Gráfico por Setor */}
           <div className="lg:col-span-1 bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg flex flex-col">
               <h3 className="text-lg font-bold text-white mb-6 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
@@ -365,10 +371,7 @@ const DashboardPage: React.FC = () => {
               
               <div className="flex-grow flex flex-col justify-center space-y-5">
                   {sectorStats.length > 0 ? sectorStats.map((stat, index) => {
-                      // Largura da barra baseada no total em relação ao maior setor (mantém proporção de volume)
                       const widthPercentage = Math.round((stat.total / maxSectorCount) * 100);
-                      
-                      // Porcentagem de urgentes dentro deste setor específico
                       const urgentPercentage = stat.total > 0 ? Math.round((stat.urgent / stat.total) * 100) : 0;
                       
                       return (
@@ -384,14 +387,11 @@ const DashboardPage: React.FC = () => {
                                       <span className="text-xs text-gray-500">({urgentPercentage}%)</span>
                                   </div>
                               </div>
-                              
                               <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden shadow-inner relative">
-                                  {/* Barra Principal (Cinza/Volume Total) */}
                                   <div 
                                       className="h-full absolute top-0 left-0 rounded-l-full bg-zinc-600" 
                                       style={{ width: `${widthPercentage}%` }}
                                   >
-                                        {/* Barra de Urgência (Vermelha) - Renderizada DENTRO da barra principal, proporcional ao % de urgência */}
                                         <div 
                                             className="h-full absolute top-0 left-0 bg-red-600 transition-all duration-1000 ease-out"
                                             style={{ width: `${urgentPercentage}%` }}
@@ -409,7 +409,7 @@ const DashboardPage: React.FC = () => {
           </div>
       </div>
 
-      {/* Recent Requests Table */}
+      {/* Solicitações Recentes */}
        <div className="bg-zinc-900 shadow-lg rounded-xl overflow-hidden border border-zinc-800">
         <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-800/20">
             <h2 className="text-lg font-bold text-white flex items-center">
@@ -437,16 +437,7 @@ const DashboardPage: React.FC = () => {
                         <tr key={request.id} className="hover:bg-zinc-800 transition-colors group">
                              {visibleColumns.map(field => (
                                 <td key={`${request.id}-${field.id}`} className="px-6 py-4 whitespace-nowrap text-sm">
-                                     {field.id === 'orderNumber' ? (
-                                        <div className="flex items-center">
-                                            <div className="h-8 w-8 rounded bg-zinc-800 flex items-center justify-center text-xs font-bold text-gray-400 mr-3 border border-zinc-700">
-                                                #{String(getCellValue(request, field.id, field.isStandard)).replace('PED-', '')}
-                                            </div>
-                                            <span className="font-medium text-white">{getCellValue(request, field.id, field.isStandard, field.type)}</span>
-                                        </div>
-                                    ) : (
-                                        getCellValue(request, field.id, field.isStandard, field.type)
-                                    )}
+                                     {getCellValue(request, field.id, field.isStandard, field.type)}
                                 </td>
                             ))}
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -457,6 +448,7 @@ const DashboardPage: React.FC = () => {
                         </tr>
                         );
                     }) : (
+                        // ... no records case ...
                         <tr>
                             <td colSpan={visibleColumns.length + 1} className="text-center py-12 text-gray-500">
                                 <p>Nenhuma solicitação encontrada recentemente.</p>

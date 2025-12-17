@@ -25,7 +25,7 @@ export const initialStatuses: Status[] = [
 ];
 
 export const initialFormFields: FormField[] = [
-    { id: 'orderNumber', label: 'Nº do Pedido', type: 'text', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 1 },
+    { id: 'orderNumber', label: 'Nº da Requisição RC', type: 'text', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 1 },
     { id: 'urgency', label: 'Urgência', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 2 },
     { id: 'requestDate', label: 'Data da Solicitação', type: 'date', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 3 },
     { id: 'requester', label: 'Solicitante', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 4 },
@@ -42,7 +42,7 @@ export const initialFormFields: FormField[] = [
 export const initialRequests: Request[] = [
   {
     id: 1,
-    orderNumber: 'PED-001',
+    orderNumber: 'RC-001',
     requestDate: '2023-10-01',
     requester: 'John Doe',
     sector: 'TI',
@@ -61,7 +61,7 @@ export const initialRequests: Request[] = [
   },
   {
     id: 2,
-    orderNumber: 'PED-002',
+    orderNumber: 'RC-002',
     requestDate: '2023-10-02',
     requester: 'John Doe',
     sector: 'RH',
@@ -77,7 +77,7 @@ export const initialRequests: Request[] = [
   },
   {
     id: 3,
-    orderNumber: 'PED-003',
+    orderNumber: 'RC-003',
     requestDate: '2023-10-03',
     requester: 'Jane Smith',
     sector: 'Financeiro',

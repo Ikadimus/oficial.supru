@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -44,7 +45,7 @@ const MainApp: React.FC = () => {
         <div className="flex h-screen bg-zinc-950 text-gray-100">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
-                <main className="flex-1 p-8 overflow-y-auto">
+                <main className="flex-1 p-4 overflow-y-auto">
                     <Routes>
                         <Route path="/" element={<DashboardPage />} />
                         <Route path="/requests" element={<RequestListPage />} />

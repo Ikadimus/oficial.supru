@@ -123,7 +123,8 @@ UPDATE public.requests SET history = '[]'::JSONB WHERE history IS NULL;
 -- =================================================================
 
 INSERT INTO public.form_fields (id, label, type, "isActive", required, "isStandard", "isVisibleInList", "orderIndex")
-VALUES ('urgency', 'Urgência', 'select', true, true, true, true, 2)
+VALUES ('urgency', 'Urgência', 'select', true, true, true, true, 2),
+       ('orderNumber', 'Nº da Requisição RC', 'text', true, true, true, true, 1)
 ON CONFLICT (id) DO UPDATE 
 SET label = EXCLUDED.label, 
     type = EXCLUDED.type, 
