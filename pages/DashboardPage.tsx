@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
@@ -121,7 +122,7 @@ const DashboardPage: React.FC = () => {
 
   // --- Estatísticas Mensais ---
   const monthlyStats = useMemo(() => {
-      const stats: { name: string; fullDate: string; count: number }[] = [];
+      const stats: { name: string; fullDate: string; count: number; urgentCount: number }[] = [];
       const today = new Date();
       
       for (let i = 5; i >= 0; i--) {
@@ -130,14 +131,17 @@ const DashboardPage: React.FC = () => {
           const yearShort = d.getFullYear().toString().slice(2);
           const key = `${monthName}/${yearShort}`; // ex: out/23
           
-          const count = filteredRequests.filter(req => {
+          const monthRequests = filteredRequests.filter(req => {
              if (!req.requestDate) return false;
              const reqYearMonth = req.requestDate.slice(0, 7); 
              const currentYearMonth = d.toISOString().slice(0, 7);
              return reqYearMonth === currentYearMonth;
-          }).length;
+          });
 
-          stats.push({ name: key, fullDate: d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }), count });
+          const count = monthRequests.length;
+          const urgentCount = monthRequests.filter(req => req.urgency === 'Alta').length;
+
+          stats.push({ name: key, fullDate: d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }), count, urgentCount });
       }
       return stats;
   }, [filteredRequests]);
@@ -149,25 +153,30 @@ const DashboardPage: React.FC = () => {
 
   // --- Estatísticas por Setor ---
   const sectorStats = useMemo(() => {
-      const counts: Record<string, number> = {};
+      const counts: Record<string, { total: number; urgent: number }> = {};
       
       sectors.forEach(s => {
-          counts[s.name] = 0;
+          counts[s.name] = { total: 0, urgent: 0 };
       });
 
       filteredRequests.forEach(req => {
           const sName = req.sector || 'Sem Setor';
-          counts[sName] = (counts[sName] || 0) + 1;
+          if (!counts[sName]) counts[sName] = { total: 0, urgent: 0 };
+          
+          counts[sName].total += 1;
+          if (req.urgency === 'Alta') {
+              counts[sName].urgent += 1;
+          }
       });
 
       return Object.entries(counts)
-          .map(([name, count]) => ({ name, count }))
-          .sort((a, b) => b.count - a.count)
-          .filter(s => s.count > 0 || sectors.length <= 5)
+          .map(([name, data]) => ({ name, ...data }))
+          .sort((a, b) => b.total - a.total)
+          .filter(s => s.total > 0 || sectors.length <= 5)
           .slice(0, 6);
   }, [filteredRequests, sectors]);
 
-  const maxSectorCount = Math.max(...sectorStats.map(s => s.count), 1);
+  const maxSectorCount = Math.max(...sectorStats.map(s => s.total), 1);
 
   if (loading) {
     return (
@@ -287,6 +296,12 @@ const DashboardPage: React.FC = () => {
                   <div className="absolute inset-x-0 bottom-0 top-0 flex items-end justify-around px-2 z-10 pt-2">
                       {monthlyStats.map((stat, index) => {
                           const heightPercentage = Math.round((stat.count / yAxisMax) * 100);
+                          
+                          // Lógica para empilhar: Urgente em cima, Normal embaixo (ou vice versa, visualmente).
+                          // Aqui usamos flex-col para renderizar.
+                          const urgentPercentage = stat.count > 0 ? (stat.urgentCount / stat.count) * 100 : 0;
+                          const normalPercentage = 100 - urgentPercentage;
+
                           const isHovered = hoveredMonth === index;
                           
                           return (
@@ -299,25 +314,35 @@ const DashboardPage: React.FC = () => {
                                   {/* Tooltip */}
                                   <div className={`absolute -top-12 transition-all duration-200 pointer-events-none z-20 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                       <div className="bg-zinc-800 text-white text-xs py-1 px-3 rounded shadow-xl border border-zinc-700 whitespace-nowrap">
-                                          <p className="font-bold">{stat.count} solicitações</p>
+                                          <p className="font-bold">{stat.count} Total <span className="text-red-400">({stat.urgentCount} Urgentes)</span></p>
                                           <p className="text-zinc-400 text-[10px]">{stat.fullDate}</p>
                                       </div>
                                       {/* Arrow */}
                                       <div className="w-2 h-2 bg-zinc-800 border-r border-b border-zinc-700 transform rotate-45 mx-auto -mt-1"></div>
                                   </div>
 
-                                  {/* Bar */}
-                                  <div className="relative w-full max-w-[24px] sm:max-w-[40px] flex items-end h-full">
+                                  {/* Bar Container - Define a altura total baseado no volume */}
+                                  <div className="relative w-full max-w-[24px] sm:max-w-[40px] flex flex-col justify-end h-full">
                                       <div 
                                           style={{ height: `${heightPercentage}%` }} 
-                                          className={`w-full rounded-t-sm transition-all duration-500 ease-out 
-                                            ${stat.count > 0 
-                                                ? 'bg-gradient-to-t from-blue-700 via-blue-600 to-indigo-500 shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
-                                                : 'bg-zinc-800 h-1'
-                                            }
-                                            ${isHovered ? 'brightness-110 to-indigo-400' : ''}
-                                          `}
-                                      ></div>
+                                          className={`w-full rounded-t-sm transition-all duration-500 ease-out flex flex-col justify-end overflow-hidden ${stat.count === 0 ? 'bg-zinc-800 h-1' : ''}`}
+                                      >
+                                          {/* Parte Urgente (Topo / Vermelho) */}
+                                          {stat.count > 0 && stat.urgentCount > 0 && (
+                                              <div 
+                                                style={{ height: `${urgentPercentage}%` }} 
+                                                className={`w-full bg-red-600 transition-all duration-300 ${isHovered ? 'brightness-110' : ''}`}
+                                              ></div>
+                                          )}
+                                          
+                                          {/* Parte Normal (Base / Azul) */}
+                                          {stat.count > 0 && (
+                                              <div 
+                                                style={{ height: `${normalPercentage}%` }} 
+                                                className={`w-full bg-gradient-to-t from-blue-700 via-blue-600 to-indigo-500 transition-all duration-300 ${isHovered ? 'brightness-110' : ''}`}
+                                              ></div>
+                                          )}
+                                      </div>
                                   </div>
                                   
                                   {/* X-Axis Label */}
@@ -335,36 +360,43 @@ const DashboardPage: React.FC = () => {
           <div className="lg:col-span-1 bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-lg flex flex-col">
               <h3 className="text-lg font-bold text-white mb-6 flex items-center">
                   <svg className="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
-                  Top Setores
+                  Top Setores / Urgência
               </h3>
               
               <div className="flex-grow flex flex-col justify-center space-y-5">
                   {sectorStats.length > 0 ? sectorStats.map((stat, index) => {
-                      const widthPercentage = Math.round((stat.count / maxSectorCount) * 100);
-                      const totalPercentage = Math.round((stat.count / total) * 100) || 0;
+                      // Largura da barra baseada no total em relação ao maior setor (mantém proporção de volume)
+                      const widthPercentage = Math.round((stat.total / maxSectorCount) * 100);
                       
-                      // Cores dinâmicas para o top 3
-                      let barColor = "from-zinc-600 to-zinc-500";
-                      if (index === 0) barColor = "from-emerald-500 to-teal-400";
-                      if (index === 1) barColor = "from-blue-500 to-cyan-400";
-                      if (index === 2) barColor = "from-purple-500 to-indigo-400";
-
+                      // Porcentagem de urgentes dentro deste setor específico
+                      const urgentPercentage = stat.total > 0 ? Math.round((stat.urgent / stat.total) * 100) : 0;
+                      
                       return (
                           <div key={index} className="group">
                               <div className="flex justify-between items-end mb-1">
-                                  <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                                  <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors truncate max-w-[50%]">
                                       {stat.name}
                                   </span>
                                   <div className="text-right">
-                                      <span className="text-sm font-bold text-white mr-1">{stat.count}</span>
-                                      <span className="text-xs text-gray-500">({totalPercentage}%)</span>
+                                      <span className="text-sm font-bold text-white mr-1">
+                                          {stat.total} / <span className="text-red-400">{stat.urgent}</span>
+                                      </span>
+                                      <span className="text-xs text-gray-500">({urgentPercentage}%)</span>
                                   </div>
                               </div>
-                              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden shadow-inner">
+                              
+                              <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden shadow-inner relative">
+                                  {/* Barra Principal (Cinza/Volume Total) */}
                                   <div 
-                                      className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-1000 ease-out`} 
+                                      className="h-full absolute top-0 left-0 rounded-l-full bg-zinc-600" 
                                       style={{ width: `${widthPercentage}%` }}
-                                  ></div>
+                                  >
+                                        {/* Barra de Urgência (Vermelha) - Renderizada DENTRO da barra principal, proporcional ao % de urgência */}
+                                        <div 
+                                            className="h-full absolute top-0 left-0 bg-red-600 transition-all duration-1000 ease-out"
+                                            style={{ width: `${urgentPercentage}%` }}
+                                        ></div>
+                                  </div>
                               </div>
                           </div>
                       );

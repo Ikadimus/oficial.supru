@@ -158,10 +158,11 @@ const RequestListPage: React.FC = () => {
   // Get columns that should be visible in the list
   const visibleColumns = formFields.filter(f => f.isVisibleInList !== false);
 
-  const getCellValue = (request: any, fieldId: string, isStandard: boolean, fieldType: string, isUrgent: boolean) => {
+  const getCellValue = (request: any, fieldId: string, isStandard: boolean, fieldType: string | undefined, isUrgent: boolean) => {
       const value = isStandard ? request[fieldId] : request.customFields?.[fieldId];
       if (value === undefined || value === null) return '-';
       
+      // Se for urgente, o texto fica vermelho e negrito
       const textColorClass = isUrgent ? "text-red-400 font-bold" : "text-gray-300";
 
       if (fieldId === 'status') {
@@ -226,6 +227,7 @@ const RequestListPage: React.FC = () => {
                     <tbody className="divide-y divide-zinc-800">
                         {sortedRequests.map((request) => {
                             const isUrgent = request.urgency === 'Alta';
+                            // Fundo vermelho suave se urgente
                             const rowClass = isUrgent ? "bg-red-900/10 hover:bg-red-900/20" : "hover:bg-zinc-800/50";
 
                             return (
@@ -236,7 +238,7 @@ const RequestListPage: React.FC = () => {
                                             {field.id === 'orderNumber' ? (
                                                 <div className="flex items-center">
                                                     {isUrgent && (
-                                                        <span className="text-red-500 font-bold text-lg mr-2" title="Urgência Alta">!</span>
+                                                        <span className="text-red-500 font-extrabold text-lg mr-2" title="Urgência Alta">!</span>
                                                     )}
                                                     <span className={`font-medium ${isUrgent ? 'text-red-400' : 'text-white'}`}>
                                                         {getCellValue(request, field.id, field.isStandard, field.type, isUrgent)}
