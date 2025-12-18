@@ -15,14 +15,14 @@ const RequestNewPage: React.FC = () => {
     orderNumber: `PED-${Date.now().toString().slice(-6)}`,
     requestDate: new Date().toISOString().slice(0, 10),
     sector: user?.sector || '',
-    requester: user?.name || '', // Solicitante = Quem está logado
+    requester: user?.name || '',
     supplier: '',
     description: '',
-    urgency: 'Normal', // Valor padrão
+    urgency: 'Normal',
     deliveryDate: '',
-    purchaseOrderDate: '', // Inicializa vazio
+    purchaseOrderDate: '',
     status: statuses[0]?.name || '',
-    responsible: '', // Responsável = Vazio inicialmente (quem vai atender)
+    responsible: '',
     items: [],
     customFields: {},
   };
@@ -34,8 +34,25 @@ const RequestNewPage: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     const field = formFields.find(f => f.id === name);
+
     if (field?.isStandard) {
-        setRequestData({ ...requestData, [name]: value });
+        const updatedData = { ...requestData, [name]: value };
+
+        // Automação de Status: Se entrega for hoje ou no passado, status vira "Entregue"
+        if (name === 'deliveryDate' && value) {
+            // Obter data de hoje no formato local YYYY-MM-DD para comparação precisa com o valor do input date
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            if (value <= todayStr) {
+                updatedData.status = 'Entregue';
+            }
+        }
+
+        setRequestData(updatedData);
     } else {
         setRequestData({
             ...requestData,
@@ -86,9 +103,7 @@ const RequestNewPage: React.FC = () => {
                 let options: string[] = [];
                 if (field.id === 'status') options = statuses.map(s => s.name);
                 if (field.id === 'sector') options = sectors.map(s => s.name);
-                // Tanto Solicitante quanto Responsável puxam a lista de Usuários
                 if (field.id === 'responsible' || field.id === 'requester') options = users.map(u => u.name);
-                // Campo de Urgência
                 if (field.id === 'urgency') options = ['Alta', 'Normal', 'Baixa'];
                 
                 return (
@@ -109,7 +124,6 @@ const RequestNewPage: React.FC = () => {
                 );
             }
 
-            // Tratamento especial para Textarea
             if (field.id === 'description' || field.type === 'textarea') {
                 return (
                     <div key={field.id} className="col-span-1 md:col-span-2">

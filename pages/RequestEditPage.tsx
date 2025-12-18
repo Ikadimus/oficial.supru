@@ -23,15 +23,12 @@ const RequestEditPage: React.FC = () => {
   useEffect(() => {
     const requestId = Number(id);
     if (requestId) {
-        // Se já temos dados carregados para este ID, não recarregue para evitar sobrescrever o que o usuário está digitando
-        // caso ocorra um update em segundo plano (optimistic update ou realtime).
         if (requestData && requestData.id === requestId) {
             return;
         }
 
         const requestToEdit = getRequestById(requestId);
         if (requestToEdit) {
-            // Cria cópias profundas para evitar referência direta e problemas com mutabilidade
             const dataCopy = JSON.parse(JSON.stringify(requestToEdit));
             setRequestData(dataCopy);
             setInitialData(JSON.parse(JSON.stringify(requestToEdit)));
@@ -41,7 +38,7 @@ const RequestEditPage: React.FC = () => {
             setInitialItems(JSON.parse(JSON.stringify(requestToEdit.items || [])));
         }
     }
-  }, [id, getRequestById, requestData]); // Dependências ajustadas
+  }, [id, getRequestById, requestData]);
 
   if (loading && !requestData) {
       return <div className="text-center p-10 text-gray-400">Carregando dados da solicitação...</div>;
@@ -54,8 +51,25 @@ const RequestEditPage: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     const field = formFields.find(f => f.id === name);
-     if (field?.isStandard) {
-        setRequestData({ ...requestData, [name]: value });
+    
+    if (field?.isStandard) {
+        const updatedData = { ...requestData, [name]: value };
+
+        // Lógica Automática: Se data de entrega for hoje ou no passado, status vira "Entregue"
+        if (name === 'deliveryDate' && value) {
+            // Obter data de hoje no formato local YYYY-MM-DD para comparação precisa com o valor do input date
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            if (value <= todayStr) {
+                updatedData.status = 'Entregue';
+            }
+        }
+
+        setRequestData(updatedData);
     } else {
         setRequestData({
             ...requestData,
@@ -88,8 +102,6 @@ const RequestEditPage: React.FC = () => {
     e.preventDefault();
     if (requestData && requestData.id && initialData) {
         setIsSaving(true);
-        // --- Lógica de Auditoria (Diff) ---
-        // Clona o array de histórico existente para não mutar o estado diretamente antes do update
         const historyEntries: RequestHistoryEntry[] = requestData.history ? [...requestData.history] : [];
         const now = new Date().toISOString();
         const userName = user?.name || 'Desconhecido';
@@ -99,7 +111,6 @@ const RequestEditPage: React.FC = () => {
             return String(val).trim();
         };
 
-        // 1. Verificar Campos
         formFields.forEach(field => {
             if (!field.isActive) return;
 
@@ -122,7 +133,6 @@ const RequestEditPage: React.FC = () => {
             }
         });
 
-        // 2. Verificar Itens
         const oldItemsStr = JSON.stringify(initialItems);
         const newItemsStr = JSON.stringify(items);
         
@@ -137,16 +147,13 @@ const RequestEditPage: React.FC = () => {
         }
 
         try {
-            // Salvar (Aguardar Promise do Contexto)
             await updateRequest(requestData.id, { 
                 ...requestData, 
                 items: items, 
                 history: historyEntries 
             });
-            // Navega apenas se não houve erro
             navigate(`/requests/${requestData.id}`, { replace: true });
         } catch (error) {
-            // O erro já é tratado no context, mas podemos manter o loading state consistente
             setIsSaving(false);
         }
     }
@@ -168,9 +175,7 @@ const RequestEditPage: React.FC = () => {
                 let options: string[] = [];
                 if (field.id === 'status') options = statuses.map(s => s.name);
                 if (field.id === 'sector') options = sectors.map(s => s.name);
-                // Preenche opções de usuários tanto para Responsável quanto para Solicitante
                 if (field.id === 'responsible' || field.id === 'requester') options = users.map(u => u.name);
-                // Campo Urgência
                 if (field.id === 'urgency') options = ['Alta', 'Normal', 'Baixa'];
                 
                 return (
@@ -191,7 +196,6 @@ const RequestEditPage: React.FC = () => {
                 );
             }
             
-            // Tratamento especial para Textarea (mas sem o botão de timestamp manual agora)
             if (field.id === 'description' || field.type === 'textarea') {
                 return (
                     <div key={field.id} className="col-span-1 md:col-span-2">
