@@ -6,71 +6,98 @@ import Button from '../components/ui/Button';
 import DatabaseSetup from '../components/DatabaseSetup';
 
 const BackgroundAnimation: React.FC = () => {
+    // Cores vibrantes: Verde Biometano, Laranja Energia, Azul Tecnologia
+    const colors = ['#10b981', '#f97316', '#3b82f6'];
+    
     return (
-        <div className="fixed inset-0 -z-10 overflow-hidden bg-[#02040a]">
-            {/* Camada de Textura/Ruído para profundidade */}
-            <div className="absolute inset-0 opacity-[0.015] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+        <div className="fixed inset-0 -z-10 overflow-hidden bg-[#010205]">
+            {/* Camada de Textura/Ruído sutil */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
 
-            {/* Esferas de Energia Ampliadas */}
-            <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-[#10b981]/10 rounded-full blur-[150px] animate-pulse"></div>
-            <div className="absolute bottom-[-20%] right-[-10%] w-[70%] h-[70%] bg-[#f97316]/10 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '3s' }}></div>
+            {/* Auras de cor (Nebulosas) */}
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#10b981]/10 rounded-full blur-[120px] animate-pulse"></div>
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#f97316]/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
             
             {/* Grid de Perspectiva 3D */}
-            <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute w-[200%] h-[200%] top-[-50%] left-[-50%] opacity-20" 
+            <div className="absolute inset-0 overflow-hidden z-10">
+                <div className="absolute w-[200%] h-[200%] top-[-50%] left-[-50%] opacity-[0.15]" 
                      style={{ 
                          backgroundImage: 'linear-gradient(#10b981 1px, transparent 1px), linear-gradient(90deg, #10b981 1px, transparent 1px)', 
                          backgroundSize: '80px 80px',
                          transform: 'perspective(500px) rotateX(60deg)',
-                         maskImage: 'linear-gradient(to bottom, transparent, black, transparent)'
+                         maskImage: 'radial-gradient(circle at center, black, transparent 80%)'
                      }}>
                 </div>
             </div>
 
-            {/* Partículas de Biometano (Flutuantes) */}
-            <div className="absolute inset-0">
-                {[...Array(20)].map((_, i) => (
-                    <div 
-                        key={i}
-                        className="absolute rounded-full bg-white opacity-20 animate-float-particle"
-                        style={{
-                            width: Math.random() * 4 + 1 + 'px',
-                            height: Math.random() * 4 + 1 + 'px',
-                            left: Math.random() * 100 + '%',
-                            top: Math.random() * 100 + '%',
-                            animationDuration: Math.random() * 10 + 10 + 's',
-                            animationDelay: Math.random() * 5 + 's',
-                            boxShadow: '0 0 10px rgba(255,255,255,0.5)'
-                        }}
-                    />
-                ))}
+            {/* BIO-PARTICLES COLORIDAS (Z-INDEX 20) */}
+            <div className="absolute inset-0 z-20">
+                {[...Array(60)].map((_, i) => {
+                    const color = colors[i % colors.length];
+                    const size = Math.random() * 7 + 3; // Tamanhos de 3px a 10px
+                    const duration = Math.random() * 12 + 8; // Mais rápidas e variadas
+                    const delay = Math.random() * 15;
+                    const left = Math.random() * 100;
+                    const opacity = Math.random() * 0.6 + 0.4; // Mais opacas para visibilidade
+
+                    return (
+                        <div 
+                            key={i}
+                            className="absolute rounded-full animate-float-3d-enhanced"
+                            style={{
+                                width: size + 'px',
+                                height: size + 'px',
+                                left: left + '%',
+                                bottom: '-5%',
+                                backgroundColor: color,
+                                boxShadow: `0 0 ${size * 3}px ${color}, 0 0 ${size}px white`,
+                                opacity: opacity,
+                                animationDuration: duration + 's',
+                                animationDelay: -delay + 's',
+                            }}
+                        />
+                    );
+                })}
             </div>
             
             {/* Linhas de Fluxo Energético */}
-            <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
+            <svg className="absolute inset-0 w-full h-full opacity-30 pointer-events-none z-30" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                    <linearGradient id="line-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient id="flow-grad" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor="transparent" />
-                        <stop offset="50%" stopColor="#10b981" stopOpacity="0.3" />
+                        <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.3" />
                         <stop offset="100%" stopColor="transparent" />
                     </linearGradient>
                 </defs>
-                <path d="M-100 300 Q 500 150 1100 450 T 2100 300" stroke="url(#line-grad)" strokeWidth="0.5" fill="none" className="animate-[dash_30s_linear_infinite]" />
-                <path d="M-100 700 Q 600 900 1200 600 T 2200 800" stroke="url(#line-grad)" strokeWidth="0.5" fill="none" className="animate-[dash_40s_linear_infinite]" style={{ animationDelay: '-10s' }} />
+                <path d="M-100 500 Q 500 300 1100 650 T 2100 500" stroke="url(#flow-grad)" strokeWidth="1" fill="none" className="animate-dash-line" />
             </svg>
 
             <style>{`
-                @keyframes dash {
-                    to { stroke-dashoffset: -2000; }
+                @keyframes float-3d-enhanced {
+                    0% { 
+                        transform: translateY(0) translateX(0) scale(0.5); 
+                        opacity: 0; 
+                    }
+                    20% { opacity: 0.8; }
+                    50% { 
+                        transform: translateY(-50vh) translateX(50px) scale(1.3); 
+                        opacity: 1;
+                    }
+                    80% { opacity: 0.8; }
+                    100% { 
+                        transform: translateY(-110vh) translateX(-30px) scale(0.5); 
+                        opacity: 0; 
+                    }
                 }
-                @keyframes float-particle {
-                    0% { transform: translateY(0) scale(1); opacity: 0; }
-                    20% { opacity: 0.3; }
-                    80% { opacity: 0.3; }
-                    100% { transform: translateY(-100vh) scale(0.5); opacity: 0; }
+                .animate-float-3d-enhanced {
+                    animation: float-3d-enhanced linear infinite;
                 }
-                .animate-float-particle {
-                    animation: float-particle linear infinite;
+                @keyframes dash-line {
+                    from { stroke-dasharray: 0 3000; stroke-dashoffset: 3000; }
+                    to { stroke-dasharray: 1500 1500; stroke-dashoffset: 0; }
+                }
+                .animate-dash-line {
+                    animation: dash-line 25s linear infinite;
                 }
             `}</style>
         </div>
@@ -88,7 +115,7 @@ const LoginPage: React.FC = () => {
 
   if (missingTables) {
       return (
-          <div className="min-h-screen flex items-center justify-center bg-[#02040a] py-12 px-4 relative">
+          <div className="min-h-screen flex items-center justify-center bg-[#010205] py-12 px-4 relative">
               <BackgroundAnimation />
               <DatabaseSetup />
           </div>
@@ -118,16 +145,18 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#02040a] py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[#010205] py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
        <BackgroundAnimation />
 
-      <div className="max-w-md w-full space-y-8 bg-black/60 backdrop-blur-[40px] p-10 rounded-[2.5rem] shadow-[0_0_100px_rgba(0,0,0,0.8)] border border-white/5 relative z-10 before:absolute before:inset-0 before:rounded-[2.5rem] before:bg-gradient-to-b before:from-white/10 before:to-transparent before:pointer-events-none">
-        <div className="flex flex-col items-center">
-          {/* Logo Customizado BIOMETANO Caieiras */}
+      <div className="max-w-md w-full space-y-8 bg-black/60 backdrop-blur-[40px] p-10 rounded-[3rem] shadow-[0_0_150px_rgba(0,0,0,1)] border border-white/10 relative z-50 overflow-hidden group">
+        {/* Efeito de brilho de vidro na borda */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+        
+        <div className="flex flex-col items-center relative z-10">
           <div className="mb-10 flex flex-col items-center group cursor-default">
-            <div className="flex items-baseline gap-2 italic transition-all group-hover:scale-110 duration-700">
-              <span className="text-4xl font-black text-white tracking-tighter drop-shadow-[0_0_25px_rgba(255,255,255,0.4)]">BIOMETANO</span>
-              <span className="text-4xl font-black text-[#f97316] tracking-tighter drop-shadow-[0_0_25px_rgba(249,115,22,0.4)]">Caieiras</span>
+            <div className="flex items-baseline gap-2 italic transition-all group-hover:scale-105 duration-700">
+              <span className="text-4xl font-black text-white tracking-tighter drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">BIOMETANO</span>
+              <span className="text-4xl font-black text-[#f97316] tracking-tighter drop-shadow-[0_0_30px_rgba(249,115,22,0.3)]">Caieiras</span>
             </div>
             <div className="mt-3 relative">
               <span className="text-[12px] font-black text-[#10b981] tracking-[0.4em] uppercase">
@@ -137,48 +166,48 @@ const LoginPage: React.FC = () => {
             </div>
           </div>
           
-          <p className="text-center text-xs text-white/40 font-bold uppercase tracking-[0.2em] mb-2">
-            Autenticação Segura
+          <p className="text-center text-[10px] text-white/40 font-black uppercase tracking-[0.3em] mb-2">
+            Autenticação de Segurança
           </p>
         </div>
         
         {connectionError && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 relative z-10">
                 <div className="flex items-center gap-3">
                     <div className="p-1.5 bg-red-500/20 rounded-lg">
                         <svg className="h-4 w-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
                     <div className="text-[11px] text-red-200 leading-tight">
-                        <p className="font-black uppercase tracking-widest">Erro de Conexão</p>
-                        <p className="opacity-60">O servidor não respondeu. Contate o suporte.</p>
+                        <p className="font-black uppercase tracking-widest">Erro de Sistema</p>
+                        <p className="opacity-60">O banco de dados está inacessível no momento.</p>
                     </div>
                 </div>
             </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form className="mt-8 space-y-6 relative z-10" onSubmit={handleSubmit}>
           <div className="space-y-5">
             <div className="group">
               <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1 mb-2 block group-focus-within:text-[#10b981] transition-colors">
-                E-mail Institucional
+                Identificação (E-mail)
               </label>
               <input
                 type="email"
                 required
-                className="w-full bg-white/[0.03] border border-white/10 text-white rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-[#10b981] focus:bg-white/[0.08] outline-none transition-all placeholder-white/10 hover:border-white/20"
-                placeholder="nome@empresa.com.br"
+                className="w-full bg-white/[0.05] border border-white/10 text-white rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-[#10b981] focus:bg-white/[0.1] outline-none transition-all placeholder-white/5 hover:border-white/20"
+                placeholder="usuario@biometano.com.br"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
               />
             </div>
             <div className="group">
               <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] ml-1 mb-2 block group-focus-within:text-[#f97316] transition-colors">
-                Chave de Acesso
+                Senha de Acesso
               </label>
               <input
                 type="password"
                 required
-                className="w-full bg-white/[0.03] border border-white/10 text-white rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-[#f97316] focus:bg-white/[0.08] outline-none transition-all placeholder-white/10 hover:border-white/20"
+                className="w-full bg-white/[0.05] border border-white/10 text-white rounded-2xl px-5 py-4 text-sm focus:ring-2 focus:ring-[#f97316] focus:bg-white/[0.1] outline-none transition-all placeholder-white/5 hover:border-white/20"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
@@ -196,17 +225,16 @@ const LoginPage: React.FC = () => {
             <Button 
                 type="submit" 
                 disabled={isLoading} 
-                className="w-full !rounded-2xl !py-5 font-black uppercase tracking-[0.3em] text-xs !bg-gradient-to-r from-[#10b981] to-[#0ea5e9] hover:scale-[1.02] active:scale-95 shadow-[0_20px_40px_rgba(16,185,129,0.3)] transition-all duration-300"
+                className="w-full !rounded-2xl !py-5 font-black uppercase tracking-[0.4em] text-[10px] !bg-gradient-to-r from-[#10b981] via-[#3b82f6] to-[#f97316] bg-[length:200%_auto] hover:bg-right hover:scale-[1.02] active:scale-95 shadow-[0_20px_60px_rgba(16,185,129,0.4)] transition-all duration-500"
             >
-              {isLoading ? 'Validando...' : 'Entrar no Sistema'}
+              {isLoading ? 'Conectando...' : 'Acessar Sistema'}
             </Button>
           </div>
         </form>
       </div>
 
-      {/* Marca d'água de Suporte sutil no canto inferior */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 text-white/10 text-[10px] font-black tracking-[0.5em] uppercase pointer-events-none whitespace-nowrap">
-        Bio-Energy Intelligence System
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 text-white/10 text-[9px] font-black tracking-[0.8em] uppercase pointer-events-none whitespace-nowrap">
+        BIO-ENERGY INTELLIGENCE SYSTEM
       </div>
 
       <style>{`
