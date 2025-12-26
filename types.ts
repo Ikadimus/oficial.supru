@@ -25,7 +25,8 @@ export interface Request {
   description?: string;
   urgency?: 'Alta' | 'Normal' | 'Baixa'; // Novo campo: Urgência
   purchaseOrderDate?: string; // Novo campo: Data da OC (Ordem de Compra)
-  deliveryDate?: string;
+  forecastDate?: string; // Novo campo: Previsão de Entrega (Informativo)
+  deliveryDate?: string; // Data Real de Entrega (Gatilha Status)
   status: string;
   responsible: string; // Quem dá andamento
   items: RequestItem[];

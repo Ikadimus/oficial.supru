@@ -32,34 +32,33 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 flex-shrink-0 bg-zinc-900 p-4 flex flex-col justify-between border-r border-zinc-800">
+    <aside className="w-72 flex-shrink-0 bg-[#0a0f1a] p-4 flex flex-col justify-between border-r border-zinc-800">
       <div>
-        <div className="flex items-center mb-8 px-2">
-          <div className="bg-zinc-800 p-2 rounded-lg mr-3">
-             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
-                <path d="M12 2L4 6.5V15.5L12 20L20 15.5V6.5L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                <path d="M12 11L20 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 11V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 11L4 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M16.5 4.5L8.5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-white text-lg font-bold">Suprimentos</h1>
-            <p className="text-xs text-gray-400">Gestão de Demandas</p>
+        {/* Logo Customizado BIOMETANO Caieiras */}
+        <div className="mb-10 px-2">
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-1.5 italic">
+              <span className="text-2xl font-black text-white tracking-tighter">BIOMETANO</span>
+              <span className="text-2xl font-black text-[#f97316] tracking-tighter">Caieiras</span>
+            </div>
+            <div className="mt-1">
+              <span className="text-[10px] font-bold text-[#10b981] tracking-[0.2em] uppercase">
+                Gestão de Suprimentos
+              </span>
+            </div>
           </div>
         </div>
 
         {/* Botão de Adicionar visível apenas para Admin */}
         {isPrivilegedUser && (
           <div className="mb-6">
-             <Button as="link" to="/requests/new" className="w-full !bg-blue-600 hover:!bg-blue-700">
-                + Adicionar Solicitação
+             <Button as="link" to="/requests/new" className="w-full !bg-blue-600 hover:!bg-blue-700 !rounded-lg !py-3 font-bold shadow-lg shadow-blue-900/20">
+                + Nova Solicitação
               </Button>
           </div>
         )}
 
-        <nav className="space-y-2">
+        <nav className="space-y-1.5">
           <NavLink to="/" className={navLinkClass} end>
             <NavIcon path="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             Dashboard
@@ -85,7 +84,8 @@ const Sidebar: React.FC = () => {
 
           {/* Configurações visíveis apenas para Admin */}
           {isPrivilegedUser && (
-            <>
+            <div className="pt-4 mt-4 border-t border-zinc-800 space-y-1.5">
+              <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Administração</p>
               <NavLink to="/users" className={navLinkClass}>
                 <NavIcon path="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 006-6v-1a3 3 0 00-3-3H9a3 3 0 00-3 3v1a6 6 0 006 6z" />
                 Usuários
@@ -96,26 +96,26 @@ const Sidebar: React.FC = () => {
               </NavLink>
               <NavLink to="/settings" className={navLinkClass}>
                 <NavIcon path="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                Configurar Campos
+                Personalizar Sistema
               </NavLink>
-            </>
+            </div>
           )}
         </nav>
       </div>
       
       <div className="border-t border-zinc-800 pt-4">
-        <div className="flex items-center p-2 rounded-md hover:bg-zinc-800">
-           <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white mr-3 flex-shrink-0">
+        <div className="flex items-center p-2 rounded-md hover:bg-zinc-800 transition-colors">
+           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center font-bold text-white mr-3 flex-shrink-0 border border-white/10 shadow-lg">
             {user ? getInitials(user.name) : ''}
           </div>
           <div className="flex-grow overflow-hidden">
             <p className="text-sm font-semibold text-white truncate">{user?.name}</p>
-            <p className="text-xs text-gray-400 truncate">{user?.sector || 'Sem setor'}</p>
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight truncate">{user?.sector || 'Sem setor'}</p>
           </div>
         </div>
-        <button onClick={handleLogout} className="w-full flex items-center mt-2 px-3 py-2.5 text-sm font-medium rounded-md text-gray-400 hover:text-white hover:bg-zinc-700">
+        <button onClick={handleLogout} className="w-full flex items-center mt-2 px-3 py-2 text-xs font-bold rounded-md text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-all uppercase tracking-widest">
           <NavIcon path="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          Sair
+          Sair do Sistema
         </button>
       </div>
     </aside>

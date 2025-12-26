@@ -62,7 +62,7 @@ const MainApp: React.FC = () => {
                     </Routes>
                 </main>
                 <footer className="p-4 text-center text-xs text-gray-500 border-t border-zinc-800">
-                    Desenvolvido por 6580005
+                    Desenvolvido por <a href="mailto:efilho@essencisbiometano.com.br" className="hover:text-blue-400 transition-colors">6580005</a>
                 </footer>
             </div>
         </div>

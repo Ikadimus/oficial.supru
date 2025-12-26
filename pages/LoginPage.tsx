@@ -128,19 +128,20 @@ const LoginPage: React.FC = () => {
 
       <div className="max-w-md w-full space-y-8 bg-[#1c1c1c] p-10 rounded-xl shadow-2xl border border-gray-700">
         <div className="flex flex-col items-center">
-            <div className="bg-blue-600/20 p-3 rounded-lg border border-blue-500/30">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
-                <path d="M12 2L4 6.5V15.5L12 20L20 15.5V6.5L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                <path d="M12 11L20 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 11V20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M12 11L4 6.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M16.5 4.5L8.5 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+          {/* Logo Customizado BIOMETANO Caieiras */}
+          <div className="mb-8 flex flex-col items-center">
+            <div className="flex items-baseline gap-1.5 italic">
+              <span className="text-3xl font-black text-white tracking-tighter">BIOMETANO</span>
+              <span className="text-3xl font-black text-[#f97316] tracking-tighter">Caieiras</span>
             </div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-100">
-            Sistema de Suprimentos
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-400">
+            <div className="mt-1">
+              <span className="text-[12px] font-bold text-[#10b981] tracking-[0.2em] uppercase">
+                Gestão de Suprimentos
+              </span>
+            </div>
+          </div>
+          
+          <p className="text-center text-sm text-gray-400">
             Entre com suas credenciais para acessar o painel
           </p>
         </div>

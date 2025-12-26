@@ -1,5 +1,4 @@
 
-// Fix: Provide full content for types.ts to define data structures for the application.
 import { Request, FormField, Status, User, Sector } from './types';
 
 export const initialSectors: Sector[] = [
@@ -33,10 +32,11 @@ export const initialFormFields: FormField[] = [
     { id: 'description', label: 'Descrição', type: 'text', isActive: true, required: false, isStandard: true, isVisibleInList: true, orderIndex: 6 },
     { id: 'supplier', label: 'Fornecedor', type: 'text', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 7 },
     { id: 'purchaseOrderDate', label: 'Data da OC', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 8 },
-    { id: 'deliveryDate', label: 'Previsão de Entrega', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 9 },
-    { id: 'status', label: 'Status', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 10 },
-    { id: 'responsible', label: 'Responsável (Atendimento)', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 11 },
-    { id: 'notes', label: 'Observações', type: 'textarea', isActive: false, required: false, isStandard: false, isVisibleInList: false, orderIndex: 12 },
+    { id: 'forecastDate', label: 'Previsão de Entrega', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 9 },
+    { id: 'deliveryDate', label: 'Data de Entrega', type: 'date', isActive: true, required: false, isStandard: true, isVisibleInList: false, orderIndex: 10 },
+    { id: 'status', label: 'Status', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 11 },
+    { id: 'responsible', label: 'Responsável (Atendimento)', type: 'select', isActive: true, required: true, isStandard: true, isVisibleInList: true, orderIndex: 12 },
+    { id: 'notes', label: 'Observações', type: 'textarea', isActive: false, required: false, isStandard: false, isVisibleInList: false, orderIndex: 13 },
 ];
 
 export const initialRequests: Request[] = [
@@ -67,29 +67,12 @@ export const initialRequests: Request[] = [
     sector: 'RH',
     supplier: 'Fornecedor B',
     description: 'Mobiliário para nova sala',
-    deliveryDate: '2023-10-15',
+    forecastDate: '2023-10-15',
     urgency: 'Normal',
     status: 'Em Andamento',
     responsible: 'John Doe',
     items: [
       { id: 'item-3', name: 'Cadeira de Escritório', quantity: 2, status: 'Em Andamento' },
     ],
-  },
-  {
-    id: 3,
-    orderNumber: 'RC-003',
-    requestDate: '2023-10-03',
-    requester: 'Jane Smith',
-    sector: 'Financeiro',
-    supplier: 'Fornecedor C',
-    description: 'Materiais de escritório diversos',
-    deliveryDate: '2023-10-20',
-    urgency: 'Baixa',
-    status: 'Pendente',
-    responsible: 'Jane Smith',
-    items: [
-      { id: 'item-4', name: 'Calculadora HP 12C', quantity: 10, status: 'Pendente' },
-    ],
-    customFields: { notes: 'Compra para o time novo.' }
   },
 ];

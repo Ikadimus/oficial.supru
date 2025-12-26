@@ -11,7 +11,7 @@ const RequestNewPage: React.FC = () => {
   const { addRequest, formFields, statuses } = useRequests();
   const { users, sectors, user } = useAuth();
   
-  const initialRequestState: Partial<Request> = {
+  const [requestData, setRequestData] = useState<Partial<Request>>({
     orderNumber: `PED-${Date.now().toString().slice(-6)}`,
     requestDate: new Date().toISOString().slice(0, 10),
     sector: user?.sector || '',
@@ -19,67 +19,57 @@ const RequestNewPage: React.FC = () => {
     supplier: '',
     description: '',
     urgency: 'Normal',
-    deliveryDate: '',
+    forecastDate: '', 
+    deliveryDate: '', 
     purchaseOrderDate: '',
-    status: statuses[0]?.name || '',
+    status: statuses[0]?.name || 'Pendente',
     responsible: '',
     items: [],
     customFields: {},
-  };
+  });
   
-  const [requestData, setRequestData] = useState<Partial<Request>>(initialRequestState);
   const [items, setItems] = useState<RequestItem[]>([]);
-  const [newItem, setNewItem] = useState({ name: '', quantity: 1, status: statuses[0]?.name || '' });
+  const [newItem, setnewItem] = useState({ name: '', quantity: 1, status: statuses[0]?.name || 'Pendente' });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const field = formFields.find(f => f.id === name);
+    const isStandardField = formFields.find(f => f.id === name)?.isStandard;
 
-    if (field?.isStandard) {
-        const updatedData = { ...requestData, [name]: value };
+    if (isStandardField) {
+      // Atualiza o dado no estado
+      setRequestData(prev => ({ ...prev, [name]: value }));
 
-        // Automação de Status: Se entrega for hoje ou no passado, status vira "Entregue"
-        if (name === 'deliveryDate' && value) {
-            // Obter data de hoje no formato local YYYY-MM-DD para comparação precisa com o valor do input date
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const todayStr = `${year}-${month}-${day}`;
-
-            if (value <= todayStr) {
-                updatedData.status = 'Entregue';
-            }
-        }
-
-        setRequestData(updatedData);
+      // GATILHO DO POPUP: Verificamos o ID do campo diretamente do evento
+      if (name === 'deliveryDate' && value) {
+        // Usamos setTimeout para não travar o render do input antes de abrir o popup
+        setTimeout(() => {
+          const confirmStatus = window.confirm("Você preencheu a Data de Entrega. Gostaria de alterar o status desta solicitação para 'Entregue'?");
+          if (confirmStatus) {
+            setRequestData(prev => ({ ...prev, status: 'Entregue' }));
+          }
+        }, 150);
+      }
     } else {
-        setRequestData({
-            ...requestData,
-            customFields: { ...requestData.customFields, [name]: value },
-        });
+      setRequestData(prev => ({
+        ...prev,
+        customFields: { ...prev.customFields, [name]: value },
+      }));
     }
   };
 
   const handleNewItemChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewItem({ ...newItem, [name]: name === 'quantity' ? parseInt(value, 10) : value });
+    setnewItem({ ...newItem, [name]: name === 'quantity' ? parseInt(value, 10) : value });
   };
 
   const handleAddItem = () => {
     if (newItem.name && newItem.quantity > 0) {
-      const itemToAdd: RequestItem = {
-        ...newItem,
-        id: `item-${Date.now()}`,
-      };
-      setItems([...items, itemToAdd]);
-      setNewItem({ name: '', quantity: 1, status: statuses[0]?.name || '' });
+      setItems([...items, { ...newItem, id: `item-${Date.now()}` }]);
+      setnewItem({ name: '', quantity: 1, status: statuses[0]?.name || 'Pendente' });
     }
   };
 
-  const handleRemoveItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
-  };
+  const handleRemoveItem = (id: string) => setItems(items.filter(item => item.id !== id));
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +77,9 @@ const RequestNewPage: React.FC = () => {
     navigate('/requests');
   };
 
-  const activeFields = formFields.filter(f => f.isActive);
+  const sortedFields = [...formFields]
+    .filter(f => f.isActive)
+    .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
   
   return (
     <div className="bg-zinc-900 shadow-xl rounded-lg overflow-hidden border border-zinc-800">
@@ -96,7 +88,7 @@ const RequestNewPage: React.FC = () => {
       </div>
       <form onSubmit={handleSubmit}>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {activeFields.map(field => {
+          {sortedFields.map(field => {
             const value = (field.isStandard ? (requestData as any)[field.id] : requestData.customFields?.[field.id]) ?? '';
             
             if (field.type === 'select') {
@@ -108,14 +100,13 @@ const RequestNewPage: React.FC = () => {
                 
                 return (
                      <div key={field.id}>
-                        <label htmlFor={field.id} className="block text-sm font-medium text-gray-300">{field.label}</label>
+                        <label className="block text-sm font-medium text-gray-400 mb-1">{field.label}</label>
                         <select
-                          id={String(field.id)}
-                          name={String(field.id)}
+                          name={field.id}
                           value={value}
                           onChange={handleInputChange}
                           required={field.required}
-                          className={`mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-600 bg-gray-800 text-gray-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md ${field.id === 'urgency' && value === 'Alta' ? 'text-red-400 border-red-500' : ''}`}
+                          className="w-full bg-gray-800 border-gray-600 text-gray-100 rounded-md py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="">Selecione...</option>
                             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -124,36 +115,28 @@ const RequestNewPage: React.FC = () => {
                 );
             }
 
-            if (field.id === 'description' || field.type === 'textarea') {
-                return (
-                    <div key={field.id} className="col-span-1 md:col-span-2">
-                        <label htmlFor={field.id} className="block text-sm font-medium text-gray-300">{field.label}</label>
-                        <textarea
-                            id={String(field.id)}
-                            name={String(field.id)}
-                            value={value}
-                            onChange={handleInputChange}
-                            required={field.required}
-                            rows={6}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-gray-800 placeholder-gray-500 text-gray-100 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm font-mono text-sm leading-relaxed"
-                            placeholder="Descreva a solicitação..."
-                        />
-                    </div>
-                );
-            }
-
             return (
-              <div key={field.id}>
-                <label htmlFor={field.id} className="block text-sm font-medium text-gray-300">{field.label}</label>
-                <input
-                  type={field.type}
-                  id={String(field.id)}
-                  name={String(field.id)}
-                  value={value}
-                  onChange={handleInputChange}
-                  required={field.required}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-600 bg-gray-800 placeholder-gray-500 text-gray-100 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
+              <div key={field.id} className={field.type === 'textarea' || field.id === 'description' ? 'col-span-1 md:col-span-2' : ''}>
+                <label className="block text-sm font-medium text-gray-400 mb-1">{field.label}</label>
+                {field.type === 'textarea' || field.id === 'description' ? (
+                  <textarea
+                    name={field.id}
+                    value={value}
+                    onChange={handleInputChange}
+                    required={field.required}
+                    rows={4}
+                    className="w-full bg-gray-800 border-gray-600 text-gray-100 rounded-md py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <input
+                    type={field.type}
+                    name={field.id}
+                    value={value}
+                    onChange={handleInputChange}
+                    required={field.required}
+                    className="w-full bg-gray-800 border-gray-600 text-gray-100 rounded-md py-2 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
               </div>
             );
           })}
@@ -161,38 +144,27 @@ const RequestNewPage: React.FC = () => {
 
         <div className="p-6 border-t border-zinc-800">
           <h3 className="text-lg font-medium text-white mb-4">Itens da Solicitação</h3>
-          <div className="space-y-4 mb-4">
+          <div className="space-y-2 mb-4">
             {items.map(item => (
-              <div key={item.id} className="flex items-center space-x-4 p-3 bg-zinc-800/50 rounded-md">
-                <span className="flex-grow text-sm text-gray-200">{item.name} ({item.quantity}x) - {item.status}</span>
-                <button type="button" onClick={() => handleRemoveItem(item.id)} className="text-red-400 hover:text-red-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg>
-                </button>
+              <div key={item.id} className="flex items-center justify-between p-2 bg-zinc-800 rounded-md border border-zinc-700">
+                <span className="text-sm text-gray-200">{item.name} ({item.quantity}x)</span>
+                <button type="button" onClick={() => handleRemoveItem(item.id)} className="text-red-400 hover:text-red-300 text-xs font-bold">Remover</button>
               </div>
             ))}
           </div>
-          <div className="flex items-end space-x-2 p-3 border border-dashed border-zinc-700 rounded-md">
-            <div className="flex-grow">
-              <label className="text-sm font-medium text-gray-300">Nome do Item</label>
-              <input type="text" name="name" value={newItem.name} onChange={handleNewItemChange} className="mt-1 w-full bg-gray-800 border-gray-600 rounded-md text-sm" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-300">Qtd.</label>
-              <input type="number" name="quantity" value={newItem.quantity} onChange={handleNewItemChange} className="mt-1 w-20 bg-gray-800 border-gray-600 rounded-md text-sm" min="1"/>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-300">Status</label>
-              <select name="status" value={newItem.status} onChange={handleNewItemChange} className="mt-1 w-full bg-gray-800 border-gray-600 rounded-md text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-4 border border-dashed border-zinc-700 rounded-lg">
+            <input type="text" placeholder="Item" name="name" value={newItem.name} onChange={handleNewItemChange} className="bg-gray-800 border-gray-600 rounded-md text-sm p-2 text-white" />
+            <input type="number" placeholder="Qtd" name="quantity" value={newItem.quantity} onChange={handleNewItemChange} className="bg-gray-800 border-gray-600 rounded-md text-sm p-2 text-white" min="1" />
+            <select name="status" value={newItem.status} onChange={handleNewItemChange} className="bg-gray-800 border-gray-600 rounded-md text-sm p-2 text-white">
                 {statuses.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
-            </div>
+            </select>
             <Button type="button" variant="secondary" onClick={handleAddItem}>Adicionar</Button>
           </div>
         </div>
 
-        <div className="p-6 bg-zinc-800/50 flex justify-end space-x-2">
+        <div className="p-6 bg-zinc-800/50 flex justify-end space-x-3">
           <Button type="button" variant="secondary" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button type="submit">Criar Solicitação</Button>
+          <Button type="submit" className="!bg-blue-600 hover:!bg-blue-700">Criar Solicitação</Button>
         </div>
       </form>
     </div>
