@@ -39,19 +39,17 @@ const RequestEditPage: React.FC = () => {
     const isStandardField = formFields.find(f => f.id === name)?.isStandard;
     
     if (isStandardField) {
-        // Atualiza o estado local
-        setRequestData(prev => prev ? { ...prev, [name]: value } : null);
-
-        // GATILHO INFALÍVEL: Verificamos o 'name' vindo do evento
-        if (name === 'deliveryDate' && value) {
-            // Pequeno delay para garantir que o navegador processe a mudança visual antes de bloquear com o confirm
-            setTimeout(() => {
-                const wantsToChangeStatus = window.confirm("Você alterou a Data de Entrega. Gostaria de mudar o status da solicitação para 'Entregue'?");
-                if (wantsToChangeStatus) {
-                    setRequestData(current => current ? { ...current, status: 'Entregue' } : null);
-                }
-            }, 150);
-        }
+        setRequestData(prev => {
+            if (!prev) return null;
+            const updated = { ...prev, [name]: value };
+            
+            // Lógica automática silenciosa: se preencher a data de entrega, muda status para Entregue
+            if (name === 'deliveryDate' && value) {
+                updated.status = 'Entregue';
+            }
+            
+            return updated;
+        });
     } else {
         setRequestData(prev => prev ? { 
             ...prev, 

@@ -36,19 +36,16 @@ const RequestNewPage: React.FC = () => {
     const isStandardField = formFields.find(f => f.id === name)?.isStandard;
 
     if (isStandardField) {
-      // Atualiza o dado no estado
-      setRequestData(prev => ({ ...prev, [name]: value }));
-
-      // GATILHO DO POPUP: Verificamos o ID do campo diretamente do evento
-      if (name === 'deliveryDate' && value) {
-        // Usamos setTimeout para não travar o render do input antes de abrir o popup
-        setTimeout(() => {
-          const confirmStatus = window.confirm("Você preencheu a Data de Entrega. Gostaria de alterar o status desta solicitação para 'Entregue'?");
-          if (confirmStatus) {
-            setRequestData(prev => ({ ...prev, status: 'Entregue' }));
+      setRequestData(prev => {
+          const updated = { ...prev, [name]: value };
+          
+          // Lógica automática silenciosa: se preencher a data de entrega, muda status para Entregue
+          if (name === 'deliveryDate' && value) {
+              updated.status = 'Entregue';
           }
-        }, 150);
-      }
+          
+          return updated;
+      });
     } else {
       setRequestData(prev => ({
         ...prev,
