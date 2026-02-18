@@ -12,11 +12,12 @@ const RequestNewPage: React.FC = () => {
   const { addRequest, formFields, statuses } = useRequests();
   const { users, sectors, user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const [requestData, setRequestData] = useState<Partial<Request>>({
     orderNumber: `PED-${Date.now().toString().slice(-6)}`,
     requestDate: new Date().toISOString().slice(0, 10),
-    sector: user?.sector || '',
+    sector: '', // Alterado de user?.sector para '' (vazio) conforme pedido
     requester: user?.name || '',
     supplier: '',
     description: '',
@@ -71,12 +72,37 @@ const RequestNewPage: React.FC = () => {
     e.preventDefault();
     if (isSaving) return;
 
+    if (!requestData.sector) {
+        setErrorMessage("Por favor, selecione o setor.");
+        return;
+    }
+
     try {
+        setErrorMessage(null);
         setIsSaving(true);
-        await addRequest({ ...requestData, items } as Omit<Request, 'id'>);
+        
+        // Garante limpeza de dados nulos/vazios
+        const submissionData = { 
+            ...requestData, 
+            items,
+            history: [{
+                date: new Date().toISOString(),
+                user: user?.name || 'Sistema',
+                field: 'Criação',
+                oldValue: '-',
+                newValue: 'Solicitação Criada'
+            }]
+        };
+        
+        if (!submissionData.deliveryDate) delete submissionData.deliveryDate;
+        if (!submissionData.forecastDate) delete submissionData.forecastDate;
+        if (!submissionData.purchaseOrderDate) delete submissionData.purchaseOrderDate;
+
+        await addRequest(submissionData as Omit<Request, 'id'>);
         navigate('/requests');
-    } catch (err) {
-        alert("Erro ao criar solicitação. Tente novamente.");
+    } catch (err: any) {
+        console.error("Erro completo ao salvar:", err);
+        setErrorMessage(err.message || "Erro desconhecido ao salvar. Verifique o SQL Editor do Supabase.");
     } finally {
         setIsSaving(false);
     }
@@ -88,8 +114,13 @@ const RequestNewPage: React.FC = () => {
   
   return (
     <div className="bg-zinc-900 shadow-xl rounded-lg overflow-hidden border border-zinc-800">
-      <div className="p-6 border-b border-zinc-800">
+      <div className="p-6 border-b border-zinc-800 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-white">Nova Solicitação</h1>
+        {errorMessage && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs px-4 py-2 rounded-md max-w-md animate-pulse">
+                <strong>Atenção:</strong> {errorMessage}
+            </div>
+        )}
       </div>
       <form onSubmit={handleSubmit}>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">

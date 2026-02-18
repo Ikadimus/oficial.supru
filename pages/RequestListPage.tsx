@@ -37,26 +37,11 @@ const formatDate = (dateString: string | undefined) => {
     }
 }
 
-const months = [
-    { name: 'Jan', value: 0 },
-    { name: 'Fev', value: 1 },
-    { name: 'Mar', value: 2 },
-    { name: 'Abr', value: 3 },
-    { name: 'Mai', value: 4 },
-    { name: 'Jun', value: 5 },
-    { name: 'Jul', value: 6 },
-    { name: 'Ago', value: 7 },
-    { name: 'Set', value: 8 },
-    { name: 'Out', value: 9 },
-    { name: 'Nov', value: 10 },
-    { name: 'Dez', value: 11 },
-];
-
 const RequestListPage: React.FC = () => {
   const { requests, loading, formFields } = useRequests();
   const { user, hasFullVisibility } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // null = Todos
+  const [selectedPeriod, setSelectedPeriod] = useState<string | null>(null); // null = Todos. Formato: "YYYY-MM"
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
   
   const visibleColumns = useMemo(() => formFields.filter(f => f.isVisibleInList !== false), [formFields]);
@@ -70,16 +55,30 @@ const RequestListPage: React.FC = () => {
       localStorage.setItem('request_list_column_widths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
-  // Identifica quais meses possuem dados para o indicador visual
-  const monthsWithData = useMemo(() => {
-    const monthsSet = new Set<number>();
+  // Gera dinamicamente os períodos disponíveis (Mês/Ano) com base nos dados reais
+  const availablePeriods = useMemo(() => {
+    const periodsMap = new Map<string, { label: string, sortKey: string }>();
+    
     requests.forEach(req => {
         if (req.requestDate) {
-            const date = new Date(req.requestDate);
-            monthsSet.add(date.getMonth());
+            // Usamos T00:00:00 para garantir que a data seja interpretada no fuso local
+            const date = new Date(req.requestDate + 'T00:00:00');
+            const month = date.getMonth();
+            const year = date.getFullYear();
+            
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            if (!periodsMap.has(key)) {
+                const monthName = date.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
+                const yearShort = String(year).slice(-2);
+                const label = `${monthName.charAt(0).toUpperCase() + monthName.slice(1)}/${yearShort}`;
+                periodsMap.set(key, { label, sortKey: key });
+            }
         }
     });
-    return monthsSet;
+
+    // ALTERAÇÃO AQUI: Ordena do mais ANTIGO para o mais RECENTE (Ordem Crescente)
+    return Array.from(periodsMap.values())
+        .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   }, [requests]);
 
   const filteredRequests = useMemo(() => {
@@ -87,11 +86,10 @@ const RequestListPage: React.FC = () => {
         // Filtro de Visibilidade (Setor)
         if (!hasFullVisibility && request.sector !== user?.sector) return false;
         
-        // Filtro de Mês
-        if (selectedMonth !== null) {
+        // Filtro de Período (Mês e Ano)
+        if (selectedPeriod !== null) {
             if (!request.requestDate) return false;
-            const date = new Date(request.requestDate);
-            if (date.getMonth() !== selectedMonth) return false;
+            if (!request.requestDate.startsWith(selectedPeriod)) return false;
         }
 
         // Filtro de Pesquisa (Texto)
@@ -108,7 +106,7 @@ const RequestListPage: React.FC = () => {
         ];
         return fields.some(val => val && String(val).toLowerCase().includes(term));
     });
-  }, [requests, selectedMonth, searchTerm, hasFullVisibility, user]);
+  }, [requests, selectedPeriod, searchTerm, hasFullVisibility, user]);
   
   const sortedRequests = useMemo(() => {
     let sortableItems = [...filteredRequests];
@@ -223,7 +221,7 @@ const RequestListPage: React.FC = () => {
                     {hasFullVisibility ? 'Todas as Solicitações' : `Solicitações: ${user?.sector}`}
                 </h1>
                 <p className="text-xs text-zinc-500 mt-1 uppercase font-black tracking-widest">
-                    {selectedMonth !== null ? `Mês: ${months[selectedMonth].name}` : 'Visão Geral'}
+                    {selectedPeriod !== null ? `Período: ${availablePeriods.find(p => p.sortKey === selectedPeriod)?.label}` : 'Visão Geral'}
                 </p>
             </div>
             <div className="relative w-full sm:w-64">
@@ -238,25 +236,23 @@ const RequestListPage: React.FC = () => {
             </div>
         </div>
 
-        {/* Filtro de Meses (Abas) */}
+        {/* Filtro de Períodos Dinâmicos (Abas) */}
         <div className="px-6 py-2 bg-zinc-950/30 border-b border-zinc-800 flex items-center overflow-x-auto scrollbar-none flex-shrink-0">
             <div className="flex space-x-1">
                 <button
-                    onClick={() => setSelectedMonth(null)}
-                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-tighter rounded-md transition-all whitespace-nowrap ${selectedMonth === null ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
+                    onClick={() => setSelectedPeriod(null)}
+                    className={`px-4 py-2 text-[11px] font-black uppercase tracking-tighter rounded-md transition-all whitespace-nowrap ${selectedPeriod === null ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
                 >
                     Todos
                 </button>
-                {months.map(m => (
+                {availablePeriods.map(p => (
                     <button
-                        key={m.value}
-                        onClick={() => setSelectedMonth(m.value)}
-                        className={`px-4 py-2 text-[11px] font-black uppercase tracking-tighter rounded-md transition-all whitespace-nowrap relative group ${selectedMonth === m.value ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
+                        key={p.sortKey}
+                        onClick={() => setSelectedPeriod(p.sortKey)}
+                        className={`px-4 py-2 text-[11px] font-black uppercase tracking-tighter rounded-md transition-all whitespace-nowrap relative group ${selectedPeriod === p.sortKey ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'}`}
                     >
-                        {m.name}
-                        {monthsWithData.has(m.value) && (
-                            <span className={`absolute top-1.5 right-1.5 w-1 h-1 rounded-full ${selectedMonth === m.value ? 'bg-white' : 'bg-blue-500'} animate-pulse`}></span>
-                        )}
+                        {p.label}
+                        <span className={`absolute top-1.5 right-1.5 w-1 h-1 rounded-full bg-blue-500 ${selectedPeriod === p.sortKey ? 'bg-white' : ''} animate-pulse`}></span>
                     </button>
                 ))}
             </div>

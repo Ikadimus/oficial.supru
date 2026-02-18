@@ -9,7 +9,6 @@ interface RequestContextType {
   statuses: Status[];
   suppliers: Supplier[];
   appConfig: AppConfig;
-  // Added: Thermal Analysis and Price Map states
   thermalAnalyses: ThermalAnalysis[];
   priceMaps: PriceMap[];
   loading: boolean;
@@ -32,7 +31,6 @@ interface RequestContextType {
   deleteSupplier: (id: string) => Promise<void>;
   updateAppConfig: (config: Partial<AppConfig>) => Promise<void>;
 
-  // Added: Thermal Analysis and Price Map methods
   getThermalAnalysisById: (id: number) => ThermalAnalysis | undefined;
   addThermalAnalysis: (analysis: Omit<ThermalAnalysis, 'id'>) => Promise<void>;
   addMeasurement: (analysisId: number, measurement: Omit<Measurement, 'id'>) => Promise<void>;
@@ -50,7 +48,6 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
   const [statuses, setStatuses] = useState<Status[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [appConfig, setAppConfig] = useState<AppConfig>({ id: 1, sla_excellent: 5, sla_good: 10 });
-  // Added: Missing states for Thermal Analysis and Price Maps
   const [thermalAnalyses, setThermalAnalyses] = useState<ThermalAnalysis[]>([]);
   const [priceMaps, setPriceMaps] = useState<PriceMap[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,14 +72,12 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
         const { data: configData } = await supabase.from('app_config').select('*').single();
         if (configData) setAppConfig(configData);
 
-        // Fetch Thermal Analyses
         const { data: thermalData } = await supabase.from('thermal_analyses').select('*');
         if (thermalData) setThermalAnalyses(thermalData);
 
-        // Fetch Price Maps
         const { data: priceMapsData } = await supabase.from('price_maps').select('*');
         if (priceMapsData) setPriceMaps(priceMapsData);
-      } catch (e) { console.log("DB Init or missing tables..."); }
+      } catch (e) { console.log("Erro ao carregar configurações básicas."); }
   };
 
   const loadAll = async () => {
@@ -103,15 +98,26 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const getRequestById = useCallback((id: number) => requests.find(r => r.id === id), [requests]);
   const getSupplierById = useCallback((id: string) => suppliers.find(s => s.id === id), [suppliers]);
-
-  // Added: Logic for Thermal Analysis and Price Maps
   const getThermalAnalysisById = useCallback((id: number) => thermalAnalyses.find(a => a.id === id), [thermalAnalyses]);
   const getPriceMapById = useCallback((id: number) => priceMaps.find(pm => pm.id === id), [priceMaps]);
 
+  // Função auxiliar para limpar dados nulos/indefinidos
+  const cleanData = (obj: any) => {
+    const newObj = { ...obj };
+    Object.keys(newObj).forEach(key => {
+        if (newObj[key] === undefined || newObj[key] === null) delete newObj[key];
+    });
+    return newObj;
+  };
+
   const addRequest = async (request: Omit<Request, 'id'>) => {
-    const { error } = await supabase.from('requests').insert(request);
+    const dataToInsert = cleanData(request);
+    // Remove qualquer ID que possa vir do front para deixar o Supabase gerar automaticamente
+    if ('id' in dataToInsert) delete (dataToInsert as any).id;
+    
+    const { error } = await supabase.from('requests').insert(dataToInsert);
     if (error) {
-        console.error("Erro ao inserir solicitação:", error);
+        console.error("Erro Supabase ao inserir:", error.message, error.details);
         throw error;
     }
     await fetchRequests();
@@ -119,9 +125,10 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const updateRequest = async (id: number, updatedRequest: Partial<Request>) => {
     const { id: _, ...dataToUpdate } = updatedRequest as any;
-    const { error } = await supabase.from('requests').update(dataToUpdate).eq('id', id);
+    const cleaned = cleanData(dataToUpdate);
+    const { error } = await supabase.from('requests').update(cleaned).eq('id', id);
     if (error) {
-        console.error("Erro ao atualizar solicitação:", error);
+        console.error("Erro Supabase ao atualizar:", error.message);
         throw error;
     }
     await fetchRequests();
@@ -129,10 +136,7 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
 
   const deleteRequest = async (id: number) => {
     const { error } = await supabase.from('requests').delete().eq('id', id);
-    if (error) {
-        console.error("Erro ao deletar solicitação:", error);
-        throw error;
-    }
+    if (error) throw error;
     await fetchRequests();
   };
 
@@ -192,7 +196,6 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
       await fetchConfigs();
   };
 
-  // Added: Thermal Analysis and Price Map methods implementation
   const addThermalAnalysis = async (analysis: Omit<ThermalAnalysis, 'id'>) => {
     const { error } = await supabase.from('thermal_analyses').insert(analysis);
     if (error) throw error;
@@ -206,7 +209,6 @@ export const RequestProvider: React.FC<{ children: ReactNode }> = ({ children })
     const newMeasurement = { ...measurement, id: `m-${Date.now()}` };
     const updatedMeasurements = [...(analysis.measurements || []), newMeasurement];
     
-    // Determine new status based on temperature
     const diff = Math.abs(measurement.measuredTemp - analysis.operatingTemp);
     let newStatus: 'Normal' | 'Atenção' | 'Crítico' = 'Normal';
     if (diff > analysis.criticalThreshold * 2) newStatus = 'Crítico';
