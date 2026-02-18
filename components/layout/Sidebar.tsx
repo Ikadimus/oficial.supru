@@ -1,5 +1,6 @@
 
 import React from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';

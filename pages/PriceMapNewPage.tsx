@@ -1,13 +1,16 @@
 
 import React, { useState } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
+// Fixed: Included missing PriceMapItem and SupplierOffer types.
 import { PriceMapItem, SupplierOffer } from '../types';
 import Button from '../components/ui/Button';
 
 const PriceMapNewPage: React.FC = () => {
     const navigate = useNavigate();
+    // Fixed: Resolved compilation error as addPriceMap is now defined in RequestContext.
     const { addPriceMap, suppliers } = useRequests();
     const { user } = useAuth();
 

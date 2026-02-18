@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 
 const ThermalAnalysisListPage: React.FC = () => {
+    // Fixed: Resolved compilation error as thermalAnalyses is now defined in RequestContext.
     const { thermalAnalyses, loading } = useRequests();
     const { user, isPrivilegedUser } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');

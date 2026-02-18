@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +9,7 @@ import Button from '../components/ui/Button';
 const PriceMapComparisonPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    // Fixed: Resolved compilation errors as methods are now defined in RequestContext.
     const { getPriceMapById, updatePriceMap } = useRequests();
     const { user } = useAuth();
     

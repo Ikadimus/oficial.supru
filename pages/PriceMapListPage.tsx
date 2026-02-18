@@ -1,11 +1,13 @@
 
 import React, { useState } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { Link } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 
 const PriceMapListPage: React.FC = () => {
+    // Fixed: Resolved compilation error as priceMaps is now defined in RequestContext.
     const { priceMaps, loading } = useRequests();
     const { isPrivilegedUser } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');

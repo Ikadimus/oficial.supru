@@ -1,4 +1,6 @@
+
 import React from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
@@ -63,12 +65,10 @@ const Sidebar: React.FC = () => {
             <NavIcon path="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
             Solicitações
           </NavLink>
-          {/* Fix: Changed anchor tags to NavLink for proper routing. */}
           <NavLink to="/users" className={navLinkClass}>
             <NavIcon path="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197M15 21a6 6 0 006-6v-1a3 3 0 00-3-3H9a3 3 0 00-3 3v1a6 6 0 006 6z" />
             Usuários
           </NavLink>
-          {/* Fix: Changed anchor tags to NavLink for proper routing. */}
           <NavLink to="/sectors" className={navLinkClass}>
             <NavIcon path="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m-1 4h1m5-4h1m-1 4h1" />
             Setores

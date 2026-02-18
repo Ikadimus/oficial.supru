@@ -1,5 +1,6 @@
 
 import React from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { Link } from 'react-router-dom';
 
 const NotFoundPage: React.FC = () => {

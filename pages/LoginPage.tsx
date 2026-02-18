@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';

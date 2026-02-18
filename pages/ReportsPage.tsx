@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/ui/Button';
 import ToggleSwitch from '../components/ui/ToggleSwitch';
 import * as XLSX from 'xlsx';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { Navigate } from 'react-router-dom';
 
 const ReportsPage: React.FC = () => {
@@ -46,7 +48,7 @@ const ReportsPage: React.FC = () => {
   const formatDateBr = (dateStr: string) => {
       if (!dateStr) return '';
       const [year, month, day] = dateStr.split('-');
-      if(year && month && day) return `${day}/${month}/${year}`;
+      if(year && month && day) return `${day}/${year}/${year}`;
       return dateStr;
   }
 

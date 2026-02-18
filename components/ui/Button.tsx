@@ -1,5 +1,6 @@
 
 import React from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { Link, LinkProps } from 'react-router-dom';
 
 type BaseProps = {

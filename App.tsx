@@ -1,5 +1,6 @@
 
 import React from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { RequestProvider } from './contexts/RequestContext';

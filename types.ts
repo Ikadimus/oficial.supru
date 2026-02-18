@@ -84,7 +84,7 @@ export interface Supplier {
   state?: string;
 }
 
-// Added missing PriceMap interfaces for procurement comparison
+// Added: Missing interfaces for Price Map and Thermal Analysis features
 export interface PriceMapItem {
   id: string;
   description: string;
@@ -110,13 +110,12 @@ export interface PriceMap {
   responsible: string;
 }
 
-// Added missing ThermalAnalysis interfaces for asset monitoring
-export interface ThermalMeasurement {
+export interface Measurement {
   id: string;
   date: string;
   measuredTemp: number;
+  notes: string;
   responsible: string;
-  notes?: string;
 }
 
 export interface ThermalAnalysis {
@@ -127,6 +126,6 @@ export interface ThermalAnalysis {
   operatingTemp: number;
   criticalThreshold: number;
   status: 'Normal' | 'Atenção' | 'Crítico';
+  measurements: Measurement[];
   lastMeasurementDate?: string;
-  measurements: ThermalMeasurement[];
 }

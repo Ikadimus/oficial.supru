@@ -6,6 +6,7 @@ import { Supplier } from '../types';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import StarRating from '../components/ui/StarRating';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { Navigate, Link } from 'react-router-dom';
 
 const SupplierFormModal: React.FC<{

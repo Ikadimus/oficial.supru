@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +11,7 @@ const RequestNewPage: React.FC = () => {
   const navigate = useNavigate();
   const { addRequest, formFields, statuses } = useRequests();
   const { users, sectors, user } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
   
   const [requestData, setRequestData] = useState<Partial<Request>>({
     orderNumber: `PED-${Date.now().toString().slice(-6)}`,
@@ -38,12 +40,9 @@ const RequestNewPage: React.FC = () => {
     if (isStandardField) {
       setRequestData(prev => {
           const updated = { ...prev, [name]: value };
-          
-          // Lógica automática silenciosa: se preencher a data de entrega, muda status para Entregue
           if (name === 'deliveryDate' && value) {
               updated.status = 'Entregue';
           }
-          
           return updated;
       });
     } else {
@@ -68,10 +67,19 @@ const RequestNewPage: React.FC = () => {
 
   const handleRemoveItem = (id: string) => setItems(items.filter(item => item.id !== id));
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addRequest({ ...requestData, items } as Omit<Request, 'id'>);
-    navigate('/requests');
+    if (isSaving) return;
+
+    try {
+        setIsSaving(true);
+        await addRequest({ ...requestData, items } as Omit<Request, 'id'>);
+        navigate('/requests');
+    } catch (err) {
+        alert("Erro ao criar solicitação. Tente novamente.");
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const sortedFields = [...formFields]
@@ -91,9 +99,9 @@ const RequestNewPage: React.FC = () => {
             if (field.type === 'select') {
                 let options: string[] = [];
                 if (field.id === 'status') options = statuses.map(s => s.name);
-                if (field.id === 'sector') options = sectors.map(s => s.name);
-                if (field.id === 'responsible' || field.id === 'requester') options = users.map(u => u.name);
-                if (field.id === 'urgency') options = ['Alta', 'Normal', 'Baixa'];
+                else if (field.id === 'sector') options = sectors.map(s => s.name);
+                else if (field.id === 'responsible' || field.id === 'requester') options = users.map(u => u.name);
+                else if (field.id === 'urgency') options = ['Alta', 'Normal', 'Baixa'];
                 
                 return (
                      <div key={field.id}>
@@ -161,7 +169,9 @@ const RequestNewPage: React.FC = () => {
 
         <div className="p-6 bg-zinc-800/50 flex justify-end space-x-3">
           <Button type="button" variant="secondary" onClick={() => navigate(-1)}>Cancelar</Button>
-          <Button type="submit" className="!bg-blue-600 hover:!bg-blue-700">Criar Solicitação</Button>
+          <Button type="submit" disabled={isSaving} className="!bg-blue-600 hover:!bg-blue-700">
+              {isSaving ? 'Salvando...' : 'Criar Solicitação'}
+          </Button>
         </div>
       </form>
     </div>

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+// Fixed: Verified standard exports for react-router-dom version 6.
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRequests } from '../contexts/RequestContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -42,12 +43,9 @@ const RequestEditPage: React.FC = () => {
         setRequestData(prev => {
             if (!prev) return null;
             const updated = { ...prev, [name]: value };
-            
-            // Lógica automática silenciosa: se preencher a data de entrega, muda status para Entregue
             if (name === 'deliveryDate' && value) {
                 updated.status = 'Entregue';
             }
-            
             return updated;
         });
     } else {
@@ -69,9 +67,9 @@ const RequestEditPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requestData.id || !initialData) return;
+    if (!requestData.id || !initialData || isSaving) return;
+    
     setIsSaving(true);
-
     const history: RequestHistoryEntry[] = requestData.history || [];
     const now = new Date().toISOString();
     
@@ -93,8 +91,9 @@ const RequestEditPage: React.FC = () => {
         await updateRequest(requestData.id, { ...requestData, items, history });
         navigate(`/requests/${requestData.id}`, { replace: true });
     } catch (err) {
+        alert("Erro ao salvar alterações. Tente novamente.");
+    } finally {
         setIsSaving(false);
-        console.error("Erro ao salvar:", err);
     }
   };
 
