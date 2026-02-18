@@ -91,6 +91,20 @@ const formatDate = (dateString: string | undefined) => {
     return dateString;
 }
 
+interface MonthSectorData {
+    name: string;
+    total: number;
+    urgent: number;
+}
+
+interface MonthlyStat {
+    name: string;
+    fullDate: string;
+    count: number;
+    urgentCount: number;
+    sectors: MonthSectorData[];
+}
+
 const DashboardPage: React.FC = () => {
   const { requests, loading, formFields, statuses } = useRequests();
   const { user, hasFullVisibility, sectors } = useAuth();
@@ -117,9 +131,9 @@ const DashboardPage: React.FC = () => {
       return counts;
   }, [filteredRequests, statuses]);
 
-  // --- Estatísticas Mensais ---
+  // --- Estatísticas Mensais com Detalhamento por Setor ---
   const monthlyStats = useMemo(() => {
-      const stats: { name: string; fullDate: string; count: number; urgentCount: number }[] = [];
+      const stats: MonthlyStat[] = [];
       const today = new Date();
       
       for (let i = 5; i >= 0; i--) {
@@ -138,7 +152,26 @@ const DashboardPage: React.FC = () => {
           const count = monthRequests.length;
           const urgentCount = monthRequests.filter(req => req.urgency === 'Alta').length;
 
-          stats.push({ name: key, fullDate: d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }), count, urgentCount });
+          // Processa detalhamento por setor para este mês específico
+          const sectorMap: Record<string, { total: number; urgent: number }> = {};
+          monthRequests.forEach(req => {
+              const sName = req.sector || 'Sem Setor';
+              if (!sectorMap[sName]) sectorMap[sName] = { total: 0, urgent: 0 };
+              sectorMap[sName].total++;
+              if (req.urgency === 'Alta') sectorMap[sName].urgent++;
+          });
+
+          const monthSectors = Object.entries(sectorMap)
+              .map(([name, data]) => ({ name, ...data }))
+              .sort((a, b) => b.total - a.total);
+
+          stats.push({ 
+              name: key, 
+              fullDate: d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }), 
+              count, 
+              urgentCount,
+              sectors: monthSectors
+          });
       }
       return stats;
   }, [filteredRequests]);
@@ -325,39 +358,72 @@ const DashboardPage: React.FC = () => {
                                 onMouseEnter={() => setHoveredMonth(index)}
                                 onMouseLeave={() => setHoveredMonth(null)}
                               >
-                                  <div className={`absolute -top-12 transition-all duration-200 pointer-events-none z-20 ${isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-                                      <div className="bg-zinc-800 text-white text-xs py-1 px-3 rounded shadow-xl border border-zinc-700 whitespace-nowrap">
-                                          <p className="font-bold">{stat.count} Total <span className="text-red-400">({stat.urgentCount} Urgentes)</span></p>
-                                          <p className="text-zinc-400 text-[10px]">{stat.fullDate}</p>
+                                  {/* POPUP DETALHADO POR ÁREA */}
+                                  <div className={`absolute bottom-full mb-3 transition-all duration-300 pointer-events-none z-50 ${isHovered ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-4 scale-95'}`}>
+                                      <div className="bg-zinc-800 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden min-w-[180px]">
+                                          <div className="bg-zinc-900/50 px-3 py-2 border-b border-zinc-700">
+                                              <p className="text-white text-[11px] font-black uppercase tracking-wider">{stat.fullDate}</p>
+                                              <div className="flex justify-between mt-1">
+                                                  <span className="text-[10px] text-zinc-400">Total: <b className="text-white">{stat.count}</b></span>
+                                                  <span className="text-[10px] text-zinc-400">Urgentes: <b className="text-red-400">{stat.urgentCount}</b></span>
+                                              </div>
+                                          </div>
+                                          
+                                          <div className="p-2 space-y-1 max-h-[200px] overflow-y-auto scrollbar-thin">
+                                              {stat.sectors.length > 0 ? stat.sectors.map((s, idx) => (
+                                                  <div key={idx} className="flex justify-between items-center text-[10px] p-1.5 rounded hover:bg-zinc-700/50 transition-colors">
+                                                      <span className="text-zinc-200 font-medium truncate max-w-[90px]" title={s.name}>{s.name}</span>
+                                                      <div className="text-right shrink-0">
+                                                          <span className="text-white font-bold">{s.total}</span>
+                                                          {s.urgent > 0 && <span className="text-red-400 ml-1">({s.urgent})</span>}
+                                                      </div>
+                                                  </div>
+                                              )) : (
+                                                  <p className="text-center text-[10px] text-zinc-500 py-2">Sem registros</p>
+                                              )}
+                                          </div>
+                                          
+                                          <div className="bg-zinc-800 p-1 text-center">
+                                              <div className="w-2 h-2 bg-zinc-800 border-r border-b border-zinc-700 transform rotate-45 mx-auto -mb-2"></div>
+                                          </div>
                                       </div>
-                                      <div className="w-2 h-2 bg-zinc-800 border-r border-b border-zinc-700 transform rotate-45 mx-auto -mt-1"></div>
                                   </div>
 
                                   <div className="relative w-full max-w-[24px] sm:max-w-[40px] flex flex-col justify-end h-full">
                                       <div 
                                           style={{ height: `${heightPercentage}%` }} 
-                                          className={`w-full rounded-t-sm transition-all duration-500 ease-out flex flex-col justify-end overflow-hidden ${stat.count === 0 ? 'bg-zinc-800 h-1' : ''}`}
+                                          className={`w-full rounded-t-sm transition-all duration-500 ease-out flex flex-col justify-end overflow-hidden ${stat.count === 0 ? 'bg-zinc-800 h-1' : 'shadow-[0_0_15px_rgba(59,130,246,0.1)]'}`}
                                       >
                                           {stat.count > 0 && stat.urgentCount > 0 && (
                                               <div 
                                                 style={{ height: `${urgentPercentage}%` }} 
-                                                className={`w-full bg-red-600 transition-all duration-300 ${isHovered ? 'brightness-110' : ''}`}
+                                                className={`w-full bg-red-600 transition-all duration-300 ${isHovered ? 'brightness-125' : ''}`}
                                               ></div>
                                           )}
                                           {stat.count > 0 && (
                                               <div 
                                                 style={{ height: `${normalPercentage}%` }} 
-                                                className={`w-full bg-gradient-to-t from-blue-700 via-blue-600 to-indigo-500 transition-all duration-300 ${isHovered ? 'brightness-110' : ''}`}
+                                                className={`w-full bg-gradient-to-t from-blue-700 via-blue-600 to-indigo-500 transition-all duration-300 ${isHovered ? 'brightness-125' : ''}`}
                                               ></div>
                                           )}
                                       </div>
                                   </div>
-                                  <span className={`text-xs mt-3 font-medium transition-colors ${isHovered ? 'text-white' : 'text-gray-500'}`}>
+                                  <span className={`text-[10px] mt-3 font-bold uppercase transition-colors ${isHovered ? 'text-white' : 'text-gray-500'}`}>
                                       {stat.name.split('/')[0]}
                                   </span>
                               </div>
                           );
                       })}
+                  </div>
+              </div>
+              <div className="mt-4 flex justify-center gap-6 text-[10px] uppercase font-bold tracking-widest text-zinc-500">
+                  <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      <span>Normal</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                      <span>Urgente</span>
                   </div>
               </div>
           </div>
@@ -448,7 +514,6 @@ const DashboardPage: React.FC = () => {
                         </tr>
                         );
                     }) : (
-                        // ... no records case ...
                         <tr>
                             <td colSpan={visibleColumns.length + 1} className="text-center py-12 text-gray-500">
                                 <p>Nenhuma solicitação encontrada recentemente.</p>

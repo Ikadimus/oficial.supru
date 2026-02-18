@@ -34,7 +34,6 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="w-72 flex-shrink-0 bg-[#0a0f1a] p-4 flex flex-col justify-between border-r border-zinc-800">
       <div>
-        {/* Logo Customizado BIOMETANO Caieiras */}
         <div className="mb-10 px-2">
           <div className="flex flex-col">
             <div className="flex items-baseline gap-1.5 italic">
@@ -49,12 +48,13 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Botão de Adicionar visível apenas para Admin */}
         {isPrivilegedUser && (
           <div className="mb-6">
-             <Button as="link" to="/requests/new" className="w-full !bg-blue-600 hover:!bg-blue-700 !rounded-lg !py-3 font-bold shadow-lg shadow-blue-900/20">
-                + Nova Solicitação
-              </Button>
+             <NavLink to="/requests/new" className="block">
+                <Button className="w-full !bg-blue-600 hover:!bg-blue-700 !rounded-lg !py-3 font-bold shadow-lg shadow-blue-900/20">
+                    + Nova Solicitação
+                </Button>
+             </NavLink>
           </div>
         )}
 
@@ -68,7 +68,6 @@ const Sidebar: React.FC = () => {
             Solicitações
           </NavLink>
           
-          {/* Relatórios para Admin, Gerente, Diretor */}
           {hasFullVisibility && (
               <>
                 <NavLink to="/reports" className={navLinkClass}>
@@ -82,7 +81,6 @@ const Sidebar: React.FC = () => {
               </>
           )}
 
-          {/* Configurações visíveis apenas para Admin */}
           {isPrivilegedUser && (
             <div className="pt-4 mt-4 border-t border-zinc-800 space-y-1.5">
               <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Administração</p>

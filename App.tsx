@@ -52,6 +52,7 @@ const MainApp: React.FC = () => {
                         <Route path="/requests/new" element={<RequestNewPage />} />
                         <Route path="/requests/:id" element={<RequestDetailPage />} />
                         <Route path="/requests/edit/:id" element={<RequestEditPage />} />
+                        
                         <Route path="/settings" element={<SettingsPage />} />
                         <Route path="/users" element={<UsersPage />} />
                         <Route path="/sectors" element={<SectorsPage />} />

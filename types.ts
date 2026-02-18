@@ -1,5 +1,4 @@
 
-// Fix: Provide full content for types.ts to define data structures for the application.
 export interface RequestItem {
   id: string;
   name: string;
@@ -8,7 +7,7 @@ export interface RequestItem {
 }
 
 export interface RequestHistoryEntry {
-  date: string; // ISO string
+  date: string;
   user: string;
   field: string;
   oldValue: string;
@@ -19,16 +18,16 @@ export interface Request {
   id: number;
   orderNumber: string;
   requestDate: string;
-  requester: string; // Novo campo: Solicitante
+  requester: string;
   sector: string;
   supplier: string;
   description?: string;
-  urgency?: 'Alta' | 'Normal' | 'Baixa'; // Novo campo: Urgência
-  purchaseOrderDate?: string; // Novo campo: Data da OC (Ordem de Compra)
-  forecastDate?: string; // Novo campo: Previsão de Entrega (Informativo)
-  deliveryDate?: string; // Data Real de Entrega (Gatilha Status)
+  urgency?: 'Alta' | 'Normal' | 'Baixa';
+  purchaseOrderDate?: string;
+  forecastDate?: string;
+  deliveryDate?: string;
   status: string;
-  responsible: string; // Quem dá andamento
+  responsible: string;
   items: RequestItem[];
   customFields?: { [key: string]: any };
   history?: RequestHistoryEntry[];
@@ -41,7 +40,7 @@ export interface FormField {
   isActive: boolean;
   required: boolean;
   isStandard: boolean;
-  isVisibleInList?: boolean; // New property to control visibility in the list
+  isVisibleInList?: boolean;
   orderIndex?: number;
 }
 
@@ -52,7 +51,7 @@ export interface Status {
 }
 
 export interface AppConfig {
-  id: number; // Singleton: sempre 1
+  id: number;
   sla_excellent: number;
   sla_good: number;
 }
@@ -79,6 +78,55 @@ export interface Supplier {
   email?: string;
   phone?: string;
   category?: string;
-  rating?: number; // 1 a 5
+  rating?: number;
   notes?: string;
+  city?: string;
+  state?: string;
+}
+
+// Added missing PriceMap interfaces for procurement comparison
+export interface PriceMapItem {
+  id: string;
+  description: string;
+  unit: string;
+  quantity: number;
+}
+
+export interface SupplierOffer {
+  supplierId: string;
+  supplierName: string;
+  freight: number;
+  deliveryDeadline: number;
+  prices: { [itemId: string]: number };
+}
+
+export interface PriceMap {
+  id: number;
+  title: string;
+  date: string;
+  status: 'Aberta' | 'Finalizada';
+  items: PriceMapItem[];
+  offers: SupplierOffer[];
+  responsible: string;
+}
+
+// Added missing ThermalAnalysis interfaces for asset monitoring
+export interface ThermalMeasurement {
+  id: string;
+  date: string;
+  measuredTemp: number;
+  responsible: string;
+  notes?: string;
+}
+
+export interface ThermalAnalysis {
+  id: number;
+  tag: string;
+  equipmentName: string;
+  sector: string;
+  operatingTemp: number;
+  criticalThreshold: number;
+  status: 'Normal' | 'Atenção' | 'Crítico';
+  lastMeasurementDate?: string;
+  measurements: ThermalMeasurement[];
 }
